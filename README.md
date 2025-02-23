@@ -1,2 +1,2 @@
-Github OAuth2
-Openai Api (예정)
+- Github OAuth2
+- Openai Api (예정)
