@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: code-review-platform
+  datasource:
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: create
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: Ov23limlDayvpTDHjRDd
+            client-secret: 4477df65664413df00393ef6021ecc92d1f0c30d
+            scope:
+              - read:user
+              - repo
