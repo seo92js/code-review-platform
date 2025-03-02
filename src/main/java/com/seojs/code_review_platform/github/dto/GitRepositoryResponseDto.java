@@ -1,4 +1,4 @@
-package com.seojs.code_review_platform.dto;
+package com.seojs.code_review_platform.github.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
@@ -10,11 +10,15 @@ import org.springframework.stereotype.Service;
 @NoArgsConstructor
 public class GitRepositoryResponseDto {
     private Long id;
+
     private String name;
-    private String fullName;
+
     private boolean isPrivate;
+
     private String description;
-    private String url;
+
+    @JsonProperty("html_url")
+    private String htmlUrl;
 
     @JsonProperty("private")
     public void setPrivate(boolean isPrivate) {
