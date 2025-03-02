@@ -1,6 +1,7 @@
 package com.seojs.code_review_platform.service;
 
-import com.seojs.code_review_platform.dto.GitRepositoryResponseDto;
+import com.seojs.code_review_platform.github.dto.GitRepositoryResponseDto;
+import com.seojs.code_review_platform.github.service.GithubService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;

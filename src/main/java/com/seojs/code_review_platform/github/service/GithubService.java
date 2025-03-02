@@ -1,6 +1,6 @@
-package com.seojs.code_review_platform.service;
+package com.seojs.code_review_platform.github.service;
 
-import com.seojs.code_review_platform.dto.GitRepositoryResponseDto;
+import com.seojs.code_review_platform.github.dto.GitRepositoryResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
