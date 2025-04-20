@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
+
 @Getter
 @Service
 @NoArgsConstructor
@@ -20,8 +22,17 @@ public class GitRepositoryResponseDto {
     @JsonProperty("html_url")
     private String htmlUrl;
 
+    private String owner;
+
     @JsonProperty("private")
     public void setPrivate(boolean isPrivate) {
         this.isPrivate = isPrivate;
     }
+
+    @JsonProperty("owner")
+    public void setOwner(Map<String, Object> owner) {
+        this.owner = owner.get("login").toString();
+    }
 }
+
+

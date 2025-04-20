@@ -1,16 +1,14 @@
 package com.seojs.code_review_platform.github.controller;
 
-import com.seojs.code_review_platform.github.dto.GitRepositoryResponseDto;
+import com.seojs.code_review_platform.github.dto.GitRepositoryWithWebhookResponseDto;
 import com.seojs.code_review_platform.github.service.GithubService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -36,11 +34,32 @@ public class GithubApiController {
     }
 
     @GetMapping("/api/github/repositories")
-    public List<GitRepositoryResponseDto> getRepositories(@AuthenticationPrincipal OAuth2User principal) throws IOException {
+    public List<GitRepositoryWithWebhookResponseDto> getRepositories(@AuthenticationPrincipal OAuth2User principal) {
         OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github", principal.getName());
 
         String accessToken = authorizedClient.getAccessToken().getTokenValue();
 
-        return githubService.getRepositories(accessToken);
+        return githubService.getRepositoriesWithWebhookStatus(accessToken);
+    }
+
+    @PostMapping("/api/github/webhook/")
+    public String handleWebhook(@RequestBody String payload, @RequestHeader("X-Github-Event") String event) {
+        if (event.equals("pull_request")) {
+            return "webhook pull request";
+        }
+
+        return "webhook release";
+    }
+
+    @PostMapping("/api/github/register")
+    public void registerWebhook(@AuthenticationPrincipal OAuth2User principal,
+                                  @RequestParam String repository) {
+        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github", principal.getName());
+
+        String accessToken = authorizedClient.getAccessToken().getTokenValue();
+
+        String owner = principal.getAttribute("login");
+
+        githubService.registerWebhook(accessToken, owner, repository);
     }
 }

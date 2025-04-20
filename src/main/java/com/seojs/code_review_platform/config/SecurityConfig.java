@@ -18,11 +18,14 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // CORS 적용
-                .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/oauth2/logout")
-                )
+//                .csrf(csrf -> csrf
+//                        .ignoringRequestMatchers("/oauth2/logout")
+//                        .ignoringRequestMatchers("/oauth2/logout")
+//                )
+                .csrf(csrf -> csrf.disable()) // CSRF 보호 비활성화 임시
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/github/status", "/oauth2/**").permitAll()
+                        .requestMatchers("/api/github/webhook/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
