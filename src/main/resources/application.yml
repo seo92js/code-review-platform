@@ -24,4 +24,4 @@ spring:
 
 github:
   webhook:
-    url: https://18b81b972ba8.ngrok-free.app/api/github/webhook/
+    url: https://fe1b5bef179e.ngrok-free.app/api/github/webhook/

@@ -1,5 +1,6 @@
 package com.seojs.code_review_platform.github.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -7,6 +8,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public class WebhookPayloadDto {
     private final String action;
+    @JsonProperty("pull_request")
     private final PullRequestDto pullRequest;
     private final RepositoryDto repository;
 

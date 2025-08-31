@@ -5,8 +5,9 @@ import com.seojs.code_review_platform.github.dto.ChangedFileDto;
 import com.seojs.code_review_platform.github.dto.GitRepositoryResponseDto;
 import com.seojs.code_review_platform.github.dto.GitRepositoryWithWebhookResponseDto;
 import com.seojs.code_review_platform.github.dto.WebhookCreateRequestDto;
-import com.seojs.code_review_platform.github.dto.WebhookPayloadDto;
 import com.seojs.code_review_platform.github.dto.WebhookResponseDto;
+import com.seojs.code_review_platform.github.entity.GithubAccount;
+import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -25,8 +26,8 @@ import java.util.Map;
 public class GithubService {
 
     private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
-    
+    private final GithubAccountRepository githubAccountRepository;
+
     @Value("${github.webhook.url}")
     private String webhookUrl;
 
@@ -134,46 +135,18 @@ public class GithubService {
     }
 
     /**
-     * Pull Request webhook 이벤트 처리
+     * owner(login)으로 accessToken 조회
      */
-    public void processPullRequestEvent(String payload, String accessToken) {
-        try {
-            WebhookPayloadDto webhookPayload = objectMapper.readValue(payload, WebhookPayloadDto.class);
-            
-            String action = webhookPayload.getAction();
-            int prNumber = webhookPayload.getPullRequest().getNumber();
-            String repoName = webhookPayload.getRepository().getName();
-            String owner = webhookPayload.getRepository().getOwner().getLogin();
-            
-            // PR이 열렸거나 수정된 경우에만 리뷰 수행
-            if ("opened".equals(action) || "synchronize".equals(action)) {
-                
-                // 1. 변경된 파일 목록 가져오기
-                List<ChangedFileDto> changedFiles = getChangedFiles(accessToken, owner, repoName, prNumber);
-                
-                if (changedFiles != null && !changedFiles.isEmpty()) {
-                    // TODO: 각 파일의 변경 내용 분석
-                    // TODO: AI 서비스 호출하여 코드 리뷰
-                    // TODO: 리뷰 결과를 PR에 코멘트로 추가
-                }
-            }
-            
-        } catch (Exception e) {
-            throw new RuntimeException("Webhook processing failed", e);
-        }
+    public String findAccessTokenByOwner(String owner) {
+        return githubAccountRepository.findByLoginId(owner)
+                .map(GithubAccount::getAccessToken)
+                .orElseThrow(() -> new RuntimeException("No accessToken for owner: " + owner));
     }
     
     /**
-     * Push webhook 이벤트를 처리
-     */
-    public void processPushEvent(String payload) {
-
-    }
-
-    /**
      * 변경된 파일 목록 가져오기
      */
-    private List<ChangedFileDto> getChangedFiles(String accessToken, String owner, String repo, int prNumber) {
+    public List<ChangedFileDto> getChangedFiles(String accessToken, String owner, String repo, int prNumber) {
         try {
             String url = String.format("https://api.github.com/repos/%s/%s/pulls/%d/files", owner, repo, prNumber);
             

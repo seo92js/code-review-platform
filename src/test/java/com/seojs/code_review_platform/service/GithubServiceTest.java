@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seojs.code_review_platform.github.dto.GitRepositoryResponseDto;
 import com.seojs.code_review_platform.github.dto.WebhookCreateRequestDto;
 import com.seojs.code_review_platform.github.dto.WebhookResponseDto;
+import com.seojs.code_review_platform.github.entity.GithubAccount;
+import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import com.seojs.code_review_platform.github.service.GithubService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,12 +36,13 @@ class GithubServiceTest {
     @Mock
     private ObjectMapper objectMapper;
 
+    private GithubAccountRepository githubAccountRepository;
     private GithubService githubService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        githubService = new GithubService(restTemplate, objectMapper);
+        githubService = new GithubService(restTemplate, githubAccountRepository);
         // 테스트용 webhook URL 설정
         ReflectionTestUtils.setField(githubService, "webhookUrl", "http://test.com/webhook");
     }
