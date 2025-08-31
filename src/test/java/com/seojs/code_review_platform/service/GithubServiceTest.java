@@ -1,8 +1,11 @@
 package com.seojs.code_review_platform.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seojs.code_review_platform.github.dto.GitRepositoryResponseDto;
 import com.seojs.code_review_platform.github.dto.WebhookCreateRequestDto;
 import com.seojs.code_review_platform.github.dto.WebhookResponseDto;
+import com.seojs.code_review_platform.github.entity.GithubAccount;
+import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import com.seojs.code_review_platform.github.service.GithubService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,6 +17,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
@@ -24,16 +28,23 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@SuppressWarnings("unchecked")
 class GithubServiceTest {
     @Mock
     private RestTemplate restTemplate;
 
+    @Mock
+    private ObjectMapper objectMapper;
+
+    private GithubAccountRepository githubAccountRepository;
     private GithubService githubService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        githubService = new GithubService(restTemplate);
+        githubService = new GithubService(restTemplate, githubAccountRepository);
+        // 테스트용 webhook URL 설정
+        ReflectionTestUtils.setField(githubService, "webhookUrl", "http://test.com/webhook");
     }
 
     @Test
@@ -86,7 +97,7 @@ class GithubServiceTest {
         )).thenReturn(response);
 
         //when
-        boolean result = githubService.isWebhook(accessToken, owner, repo, webhookUrl);
+        boolean result = githubService.isWebhook(accessToken, owner, repo);
 
         //then
         assertTrue(result);
@@ -98,7 +109,6 @@ class GithubServiceTest {
         String accessToken = "test-token";
         String owner = "test-owner";
         String repo = "test-repo";
-        String webhookUrl = "http://example.com/webhook";
         String differentUrl = "http://different.com/webhook";
 
         Map<String, String> config = new HashMap<>();
@@ -118,7 +128,7 @@ class GithubServiceTest {
         )).thenReturn(response);
 
         // when
-        boolean result = githubService.isWebhook(accessToken, owner, repo, webhookUrl);
+        boolean result = githubService.isWebhook(accessToken, owner, repo);
 
         // then
         assertFalse(result);
