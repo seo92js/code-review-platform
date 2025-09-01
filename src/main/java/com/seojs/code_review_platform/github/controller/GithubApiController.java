@@ -2,7 +2,7 @@ package com.seojs.code_review_platform.github.controller;
 
 import com.seojs.code_review_platform.github.dto.GitRepositoryWithWebhookResponseDto;
 import com.seojs.code_review_platform.github.service.GithubService;
-import com.seojs.code_review_platform.pullrequest.service.PullRequestWebhookService;
+import com.seojs.code_review_platform.pullrequest.service.PullRequestService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
@@ -18,7 +18,7 @@ import java.util.List;
 public class GithubApiController {
     private final GithubService githubService;
     private final OAuth2AuthorizedClientService authorizedClientService;
-    private final PullRequestWebhookService pullRequestWebhookService;
+    private final PullRequestService pullRequestWebhookService;
 
     @GetMapping("/api/github/status")
     public boolean getLoginStatus(@AuthenticationPrincipal OAuth2User principal) {

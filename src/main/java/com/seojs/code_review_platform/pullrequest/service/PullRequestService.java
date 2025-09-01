@@ -2,6 +2,7 @@ package com.seojs.code_review_platform.pullrequest.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seojs.code_review_platform.github.dto.WebhookPayloadDto;
+import com.seojs.code_review_platform.pullrequest.dto.PullRequestResponseDto;
 import com.seojs.code_review_platform.pullrequest.entity.PullRequest;
 import com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +13,7 @@ import java.util.List;
 
 @RequiredArgsConstructor
 @Service
-public class PullRequestWebhookService {
+public class PullRequestService {
 
     private final PullRequestRepository pullRequestRepository;
     private final ObjectMapper objectMapper;
@@ -33,6 +34,16 @@ public class PullRequestWebhookService {
         } catch (Exception e) {
             throw new RuntimeException("Webhook processing failed", e);
         }
+    }
+
+    /**
+     * 특정 저장소의 PR 목록 조회
+     */
+    @Transactional
+    public List<PullRequestResponseDto> getPullRequestList(String ownerLogin, String repositoryName) {
+        return pullRequestRepository.findByOwnerLoginAndRepositoryNameOrderByUpdatedAtDesc(ownerLogin, repositoryName).stream()
+        .map(PullRequestResponseDto::fromEntity)
+        .toList();
     }
 
     /**
