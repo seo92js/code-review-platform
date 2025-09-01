@@ -1,6 +1,5 @@
 package com.seojs.code_review_platform.github.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seojs.code_review_platform.github.dto.ChangedFileDto;
 import com.seojs.code_review_platform.github.dto.GitRepositoryResponseDto;
 import com.seojs.code_review_platform.github.dto.GitRepositoryWithWebhookResponseDto;
@@ -37,16 +36,14 @@ public class GithubService {
     public List<GitRepositoryResponseDto> getRepositories(String accessToken) {
         String url = "https://api.github.com/user/repos";
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
+        HttpHeaders headers = createAuthHeaders(accessToken);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
         ResponseEntity<List<GitRepositoryResponseDto>> response = restTemplate.exchange(
                 url,
                 HttpMethod.GET,
                 entity,
-                new ParameterizedTypeReference<>() {
-                }
+                new ParameterizedTypeReference<>() {}
         );
 
         return response.getBody();
@@ -58,8 +55,7 @@ public class GithubService {
     public boolean isWebhook(String accessToken, String owner, String repo) {
         String url = String.format("https://api.github.com/repos/%s/%s/hooks", owner, repo);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
+        HttpHeaders headers = createAuthHeaders(accessToken);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
         ResponseEntity<List<WebhookResponseDto>> response = restTemplate.exchange(
@@ -91,7 +87,10 @@ public class GithubService {
         return repositories.stream()
                 .map(repo -> {
                     boolean hasWebhook = isWebhook(accessToken, repo.getOwner(), repo.getName());
-                    return GitRepositoryWithWebhookResponseDto.builder().repository(repo).hasWebhook(hasWebhook).build();
+                    return GitRepositoryWithWebhookResponseDto.builder()
+                            .repository(repo)
+                            .hasWebhook(hasWebhook)
+                            .build();
                 })
                 .toList();
     }
@@ -102,29 +101,13 @@ public class GithubService {
     public WebhookResponseDto registerWebhook(String accessToken, String owner, String repo) {
         String url = String.format("https://api.github.com/repos/%s/%s/hooks", owner, repo);
 
-        //웹훅 설정
-        Map<String, String> config = new HashMap<>();
-        config.put("url", webhookUrl);
-        config.put("content_type", "json");
-        config.put("insecure_ssl", "0");
-
-        //웹훅 이벤트
-        List<String> events = Arrays.asList("push", "pull_request");
-
-        WebhookCreateRequestDto dto = WebhookCreateRequestDto.builder()
-                .name("web")
-                .config(config)
-                .events(events)
-                .active(true)
-                .build();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
+        WebhookCreateRequestDto dto = createWebhookRequest();
+        HttpHeaders headers = createAuthHeaders(accessToken);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<WebhookCreateRequestDto> entity = new HttpEntity<>(dto, headers);
 
-        HttpEntity<WebhookResponseDto> response = restTemplate.exchange(
+        ResponseEntity<WebhookResponseDto> response = restTemplate.exchange(
                 url,
                 HttpMethod.POST,
                 entity,
@@ -144,14 +127,13 @@ public class GithubService {
     }
     
     /**
-     * 변경된 파일 목록 가져오기
+     * PR의 변경된 파일 목록 조회
      */
     public List<ChangedFileDto> getChangedFiles(String accessToken, String owner, String repo, int prNumber) {
         try {
             String url = String.format("https://api.github.com/repos/%s/%s/pulls/%d/files", owner, repo, prNumber);
             
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(accessToken);
+            HttpHeaders headers = createAuthHeaders(accessToken);
             headers.set("Accept", "application/vnd.github.v3+json");
             HttpEntity<String> entity = new HttpEntity<>(headers);
             
@@ -163,14 +145,38 @@ public class GithubService {
             );
             
             List<ChangedFileDto> changedFiles = response.getBody();
-            if (changedFiles == null) {
-                return Collections.emptyList();
-            }
-            
-            return changedFiles;
+            return changedFiles != null ? changedFiles : Collections.emptyList();
             
         } catch (Exception e) {
             throw new RuntimeException("Failed to get changed files", e);
         }
+    }
+
+    /**
+     * GitHub API 인증 헤더 생성
+     */
+    private HttpHeaders createAuthHeaders(String accessToken) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        return headers;
+    }
+
+    /**
+     * Webhook 생성 요청 DTO 생성
+     */
+    private WebhookCreateRequestDto createWebhookRequest() {
+        Map<String, String> config = new HashMap<>();
+        config.put("url", webhookUrl);
+        config.put("content_type", "json");
+        config.put("insecure_ssl", "0");
+
+        List<String> events = Arrays.asList("push", "pull_request");
+
+        return WebhookCreateRequestDto.builder()
+                .name("web")
+                .config(config)
+                .events(events)
+                .active(true)
+                .build();
     }
 }

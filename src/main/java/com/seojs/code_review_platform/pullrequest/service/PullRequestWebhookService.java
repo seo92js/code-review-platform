@@ -28,7 +28,7 @@ public class PullRequestWebhookService {
             
             // PR 관련 액션만 처리
             if (isPrAction(action)) {
-                savePullRequest(webhookPayload, payload);
+                savePullRequest(webhookPayload);
             }
         } catch (Exception e) {
             throw new RuntimeException("Webhook processing failed", e);
@@ -45,7 +45,7 @@ public class PullRequestWebhookService {
     /**
      * PR 정보를 데이터베이스에 저장
      */
-    private void savePullRequest(WebhookPayloadDto webhookPayload, String originalPayload) {
+    private void savePullRequest(WebhookPayloadDto webhookPayload) {
         String repoName = webhookPayload.getRepository().getName();
         String ownerLogin = webhookPayload.getRepository().getOwner().getLogin();
         Integer prNumber = webhookPayload.getPullRequest().getNumber();
@@ -57,18 +57,17 @@ public class PullRequestWebhookService {
                 .orElse(null);
 
         if (existingPr != null) {
-            updateExistingPullRequest(existingPr, action, originalPayload);
+            updateExistingPullRequest(existingPr, action);
         } else {
-            createNewPullRequest(repoName, ownerLogin, prNumber, action, title, originalPayload);
+            createNewPullRequest(repoName, ownerLogin, prNumber, action, title);
         }
     }
 
     /**
      * 기존 PR 업데이트
      */
-    private void updateExistingPullRequest(PullRequest existingPr, String action, String payload) {
+    private void updateExistingPullRequest(PullRequest existingPr, String action) {
         existingPr.updateStatus(PullRequest.ReviewStatus.PENDING);
-        existingPr.updateWebhookPayload(payload);
         existingPr.updateAction(action);
         
         pullRequestRepository.save(existingPr);
@@ -78,14 +77,13 @@ public class PullRequestWebhookService {
      * 새 PR 생성
      */
     private void createNewPullRequest(String repoName, String ownerLogin, Integer prNumber, 
-                                   String action, String title, String payload) {
+                                   String action, String title) {
         PullRequest newPr = PullRequest.builder()
                 .repositoryName(repoName)
                 .ownerLogin(ownerLogin)
                 .prNumber(prNumber)
                 .action(action)
                 .title(title)
-                .webhookPayload(payload)
                 .status(PullRequest.ReviewStatus.PENDING)
                 .build();
 
