@@ -34,9 +34,6 @@ public class PullRequest {
     @Enumerated(EnumType.STRING)
     private ReviewStatus status;
 
-    @Column(columnDefinition = "TEXT")
-    private String webhookPayload;
-
     private Integer changedFilesCount = 0;
 
     @Column(nullable = false)
@@ -73,24 +70,18 @@ public class PullRequest {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public void updateWebhookPayload(String payload) {
-        this.webhookPayload = payload;
-        this.updatedAt = LocalDateTime.now();
-    }
-
     public void updateAction(String action) {
         this.action = action;
         this.updatedAt = LocalDateTime.now();
     }
 
     @Builder
-    public PullRequest(Integer prNumber, String repositoryName, String ownerLogin, String title, String action, String webhookPayload, ReviewStatus status, Integer changedFilesCount) {
+    public PullRequest(Integer prNumber, String repositoryName, String ownerLogin, String title, String action, ReviewStatus status, Integer changedFilesCount) {
         this.prNumber = prNumber;
         this.repositoryName = repositoryName;
         this.ownerLogin = ownerLogin;
         this.title = title;
         this.action = action;
-        this.webhookPayload = webhookPayload;
         this.status = status;
         this.changedFilesCount = changedFilesCount != null ? changedFilesCount : 0;
     }
