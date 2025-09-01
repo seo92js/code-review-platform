@@ -1,6 +1,5 @@
 package com.seojs.code_review_platform.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seojs.code_review_platform.github.dto.GitRepositoryResponseDto;
 import com.seojs.code_review_platform.github.dto.WebhookCreateRequestDto;
 import com.seojs.code_review_platform.github.dto.WebhookResponseDto;
@@ -30,13 +29,13 @@ import static org.mockito.Mockito.when;
 
 @SuppressWarnings("unchecked")
 class GithubServiceTest {
+    
     @Mock
     private RestTemplate restTemplate;
 
     @Mock
-    private ObjectMapper objectMapper;
-
     private GithubAccountRepository githubAccountRepository;
+
     private GithubService githubService;
 
     @BeforeEach
@@ -48,8 +47,8 @@ class GithubServiceTest {
     }
 
     @Test
-    void getRepositories() {
-        //given
+    void getRepositories_성공() {
+        // given
         String accessToken = "test-token";
         List<GitRepositoryResponseDto> repos = Arrays.asList(
                 new GitRepositoryResponseDto(),
@@ -65,16 +64,16 @@ class GithubServiceTest {
                 any(ParameterizedTypeReference.class)
         )).thenReturn(response);
 
-        //when
+        // when
         List<GitRepositoryResponseDto> result = githubService.getRepositories(accessToken);
 
-        //then
+        // then
         assertEquals(repos, result);
     }
 
     @Test
-    void isWebhook_returnsTrueWhenWebhookExists() {
-        //given
+    void isWebhook_웹훅존재시_True반환() {
+        // given
         String accessToken = "test-token";
         String owner = "test-owner";
         String repo = "test-repo";
@@ -96,15 +95,15 @@ class GithubServiceTest {
                 any(ParameterizedTypeReference.class)
         )).thenReturn(response);
 
-        //when
+        // when
         boolean result = githubService.isWebhook(accessToken, owner, repo);
 
-        //then
+        // then
         assertTrue(result);
     }
 
     @Test
-    void isWebhook_returnsFalseWhenWebhookDoesNotExist() {
+    void isWebhook_웹훅없을시_False반환() {
         // given
         String accessToken = "test-token";
         String owner = "test-owner";
@@ -135,7 +134,44 @@ class GithubServiceTest {
     }
 
     @Test
-    void createWebhook() {
+    void getRepositoriesWithWebhookStatus_성공() {
+        // given
+        String accessToken = "test-token";
+        
+        GitRepositoryResponseDto repo1 = new GitRepositoryResponseDto();
+        GitRepositoryResponseDto repo2 = new GitRepositoryResponseDto();
+
+        List<GitRepositoryResponseDto> repos = Arrays.asList(repo1, repo2);
+
+        when(restTemplate.exchange(
+                eq("https://api.github.com/user/repos"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                any(ParameterizedTypeReference.class)
+        )).thenReturn(new ResponseEntity<>(repos, HttpStatus.OK));
+
+        when(restTemplate.exchange(
+                any(String.class),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                any(ParameterizedTypeReference.class)
+        )).thenReturn(
+                new ResponseEntity<>(repos, HttpStatus.OK),
+                new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK),
+                new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK)
+        );
+
+        // when
+        var result = githubService.getRepositoriesWithWebhookStatus(accessToken);
+
+        // then
+        assertEquals(2, result.size());
+        assertFalse(result.get(0).isHasWebhook());
+        assertFalse(result.get(1).isHasWebhook());
+    }
+
+    @Test
+    void registerWebhook_성공() {
         // given
         String accessToken = "test-token";
         String owner = "test-owner";
@@ -143,7 +179,6 @@ class GithubServiceTest {
 
         WebhookResponseDto expectedResponse = new WebhookResponseDto();
         expectedResponse.setId(123L);
-        Map<String, String> config = new HashMap<>();
         ResponseEntity<WebhookResponseDto> response = new ResponseEntity<>(expectedResponse, HttpStatus.CREATED);
 
         when(restTemplate.exchange(
@@ -175,5 +210,41 @@ class GithubServiceTest {
         assertEquals("json", requestDto.getConfig().get("content_type"));
         assertTrue(requestDto.getEvents().contains("push"));
         assertTrue(requestDto.getEvents().contains("pull_request"));
+    }
+
+    @Test
+    void findAccessTokenByOwner_성공() {
+        // given
+        String owner = "test-owner";
+        String expectedToken = "test-access-token";
+        
+        GithubAccount account = GithubAccount.builder()
+                .loginId(owner)
+                .accessToken(expectedToken)
+                .build();
+
+        when(githubAccountRepository.findByLoginId(owner))
+                .thenReturn(Optional.of(account));
+
+        // when
+        String result = githubService.findAccessTokenByOwner(owner);
+
+        // then
+        assertEquals(expectedToken, result);
+    }
+
+    @Test
+    void findAccessTokenByOwner_계정없을시_예외발생() {
+        // given
+        String owner = "non-existent-owner";
+
+        when(githubAccountRepository.findByLoginId(owner))
+                .thenReturn(Optional.empty());
+
+        // when & then
+        RuntimeException exception = assertThrows(RuntimeException.class, 
+                () -> githubService.findAccessTokenByOwner(owner));
+        
+        assertEquals("No accessToken for owner: " + owner, exception.getMessage());
     }
 }
