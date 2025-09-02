@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: code-review-platform
+  datasource:
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: create
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: YOUR_GITHUB_CLIENT_ID
+            client-secret: YOUR_GITHUB_CLIENT_SECRET
+            scope:
+              - read:user
+              - repo
+
+github:
+  webhook:
+    url: YOUR_WEBHOOK_URL

@@ -1,5 +1,6 @@
 package com.seojs.code_review_platform.pullrequest.entity;
 
+import com.seojs.code_review_platform.github.entity.GithubAccount;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,8 +23,9 @@ public class PullRequest {
     @Column(nullable = false)
     private String repositoryName;
 
-    @Column(nullable = false)
-    private String ownerLogin;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "github_account_id", nullable = false)
+    private GithubAccount githubAccount;
 
     private String title;
 
@@ -69,10 +71,10 @@ public class PullRequest {
     }
 
     @Builder
-    public PullRequest(Integer prNumber, String repositoryName, String ownerLogin, String title, String action, ReviewStatus status) {
+    public PullRequest(Integer prNumber, String repositoryName, GithubAccount githubAccount, String title, String action, ReviewStatus status) {
         this.prNumber = prNumber;
         this.repositoryName = repositoryName;
-        this.ownerLogin = ownerLogin;
+        this.githubAccount = githubAccount;
         this.title = title;
         this.action = action;
         this.status = status;

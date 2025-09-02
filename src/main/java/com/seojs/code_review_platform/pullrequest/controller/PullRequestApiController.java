@@ -24,16 +24,16 @@ public class PullRequestApiController {
     
     @GetMapping("/api/pull-requests")
     public List<PullRequestResponseDto> getPullRequestList(@AuthenticationPrincipal OAuth2User principal, @RequestParam String repositoryName) {
-        String ownerLogin = principal.getAttribute("login");
-        return pullRequestService.getPullRequestList(ownerLogin, repositoryName);
+        String loginId = principal.getAttribute("login");
+        return pullRequestService.getPullRequestList(loginId, repositoryName);
     }
 
     @GetMapping("/api/pull-request/changes")
     public List<ChangedFileDto> getPullRequestWithChanges(@AuthenticationPrincipal OAuth2User principal, @RequestParam String repository, @RequestParam Integer prNumber) {
         OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github", principal.getName());
         String accessToken = authorizedClient.getAccessToken().getTokenValue();
-        String ownerLogin = principal.getAttribute("login");
+        String loginId = principal.getAttribute("login");
 
-        return pullRequestService.getPullRequestWithChanges(ownerLogin, repository, prNumber, accessToken);
+        return pullRequestService.getPullRequestWithChanges(loginId, repository, prNumber, accessToken);
     }
 }
