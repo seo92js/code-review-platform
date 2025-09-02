@@ -1,10 +1,12 @@
 package com.seojs.code_review_platform.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.seojs.code_review_platform.github.dto.ChangedFileDto;
 import com.seojs.code_review_platform.github.dto.WebhookPayloadDto;
 import com.seojs.code_review_platform.github.dto.WebhookPayloadDto.PullRequestDto;
 import com.seojs.code_review_platform.github.dto.WebhookPayloadDto.RepositoryDto;
 import com.seojs.code_review_platform.github.dto.WebhookPayloadDto.UserDto;
+import com.seojs.code_review_platform.github.service.GithubService;
 import com.seojs.code_review_platform.pullrequest.dto.PullRequestResponseDto;
 import com.seojs.code_review_platform.pullrequest.entity.PullRequest;
 import com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository;
@@ -21,11 +23,15 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.*;
 
 class PullRequestServiceTest {
 
     @Mock
     private PullRequestRepository pullRequestRepository;
+
+    @Mock
+    private GithubService githubService;
 
     @Mock
     private ObjectMapper objectMapper;
@@ -35,7 +41,7 @@ class PullRequestServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        pullRequestService = new PullRequestService(pullRequestRepository, objectMapper);
+        pullRequestService = new PullRequestService(pullRequestRepository, githubService, objectMapper);
     }
 
     @Test
@@ -294,6 +300,219 @@ class PullRequestServiceTest {
                 () -> pullRequestService.processAndSaveWebhook(invalidPayload));
 
         assertEquals("Webhook processing failed", exception.getMessage());
+    }
+
+    @Test
+    void getPullRequestWithChanges_성공() {
+        // given
+        String ownerLogin = "test-owner";
+        String repositoryName = "test-repo";
+        Integer prNumber = 123;
+        String accessToken = "test-access-token";
+
+        // 테스트용 PR 엔티티 생성
+        PullRequest pullRequest = PullRequest.builder()
+                .prNumber(prNumber)
+                .repositoryName(repositoryName)
+                .ownerLogin(ownerLogin)
+                .title("Test PR")
+                .action("opened")
+                .status(PullRequest.ReviewStatus.PENDING)
+                .build();
+
+        // 테스트용 변경된 파일 목록 생성
+        ChangedFileDto changedFile1 = new ChangedFileDto(
+                "src/main/java/Example.java",
+                "modified",
+                5,
+                2,
+                7,
+                100,
+                "abc123",
+                "https://github.com/test-owner/test-repo/blob/main/src/main/java/Example.java",
+                "https://raw.githubusercontent.com/test-owner/test-repo/main/src/main/java/Example.java",
+                "https://api.github.com/repos/test-owner/test-repo/contents/src/main/java/Example.java",
+                "@@ -1,3 +1,4 @@\n public class Example {\n+    // 새로운 주석\n     private String name;\n-    private int age;\n+    private String age;\n"
+        );
+
+        ChangedFileDto changedFile2 = new ChangedFileDto(
+                "README.md",
+                "added",
+                10,
+                0,
+                10,
+                10,
+                "def456",
+                "https://github.com/test-owner/test-repo/blob/main/README.md",
+                "https://raw.githubusercontent.com/test-owner/test-repo/main/README.md",
+                "https://api.github.com/repos/test-owner/test-repo/contents/README.md",
+                "@@ -0,0 +1,10 @@\n+# Test Repository\n+This is a test repository.\n+\n+## Features\n+- Feature 1\n+- Feature 2\n+\n+## Usage\n+See the documentation.\n"
+        );
+
+        List<ChangedFileDto> expectedChangedFiles = Arrays.asList(changedFile1, changedFile2);
+
+        // Repository mock 설정
+        when(pullRequestRepository.findByRepositoryNameAndOwnerLoginAndPrNumber(repositoryName, ownerLogin, prNumber))
+                .thenReturn(Optional.of(pullRequest));
+
+        // GithubService mock 설정
+        when(githubService.getChangedFiles(accessToken, ownerLogin, repositoryName, prNumber))
+                .thenReturn(expectedChangedFiles);
+
+        // when
+        List<ChangedFileDto> result = pullRequestService.getPullRequestWithChanges(ownerLogin, repositoryName, prNumber, accessToken);
+
+        // then
+        assertEquals(2, result.size());
+        
+        // 첫 번째 파일 검증
+        ChangedFileDto firstFile = result.get(0);
+        assertEquals("src/main/java/Example.java", firstFile.getFilename());
+        assertEquals("modified", firstFile.getStatus());
+        assertEquals(5, firstFile.getAdditions());
+        assertEquals(2, firstFile.getDeletions());
+        assertEquals(7, firstFile.getChanges());
+        assertEquals(100, firstFile.getLines());
+        assertTrue(firstFile.getPatch().contains("// 새로운 주석"));
+        assertTrue(firstFile.getPatch().contains("private String age"));
+
+        // 두 번째 파일 검증
+        ChangedFileDto secondFile = result.get(1);
+        assertEquals("README.md", secondFile.getFilename());
+        assertEquals("added", secondFile.getStatus());
+        assertEquals(10, secondFile.getAdditions());
+        assertEquals(0, secondFile.getDeletions());
+        assertEquals(10, secondFile.getChanges());
+        assertEquals(10, secondFile.getLines());
+        assertTrue(secondFile.getPatch().contains("# Test Repository"));
+
+        // Repository와 GithubService 메서드 호출 검증
+        verify(pullRequestRepository).findByRepositoryNameAndOwnerLoginAndPrNumber(repositoryName, ownerLogin, prNumber);
+        verify(githubService).getChangedFiles(accessToken, ownerLogin, repositoryName, prNumber);
+    }
+
+    @Test
+    void getPullRequestWithChanges_PR존재하지않음_예외발생() {
+        // given
+        String ownerLogin = "test-owner";
+        String repositoryName = "test-repo";
+        Integer prNumber = 999;
+        String accessToken = "test-access-token";
+
+        // Repository에서 PR을 찾지 못함
+        when(pullRequestRepository.findByRepositoryNameAndOwnerLoginAndPrNumber(repositoryName, ownerLogin, prNumber))
+                .thenReturn(Optional.empty());
+
+        // when & then
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> pullRequestService.getPullRequestWithChanges(ownerLogin, repositoryName, prNumber, accessToken));
+
+        assertEquals("Pull request not found", exception.getMessage());
+        
+        // Repository 메서드 호출 검증
+        verify(pullRequestRepository).findByRepositoryNameAndOwnerLoginAndPrNumber(repositoryName, ownerLogin, prNumber);
+        // GithubService는 호출되지 않아야 함
+        verify(githubService, never()).getChangedFiles(anyString(), anyString(), anyString(), anyInt());
+    }
+
+    @Test
+    void getPullRequestWithChanges_변경된파일없음_빈리스트반환() {
+        // given
+        String ownerLogin = "test-owner";
+        String repositoryName = "test-repo";
+        Integer prNumber = 123;
+        String accessToken = "test-access-token";
+
+        // 테스트용 PR 엔티티 생성
+        PullRequest pullRequest = PullRequest.builder()
+                .prNumber(prNumber)
+                .repositoryName(repositoryName)
+                .ownerLogin(ownerLogin)
+                .title("Test PR")
+                .action("opened")
+                .status(PullRequest.ReviewStatus.PENDING)
+                .build();
+
+        // Repository mock 설정
+        when(pullRequestRepository.findByRepositoryNameAndOwnerLoginAndPrNumber(repositoryName, ownerLogin, prNumber))
+                .thenReturn(Optional.of(pullRequest));
+
+        // GithubService에서 빈 리스트 반환
+        when(githubService.getChangedFiles(accessToken, ownerLogin, repositoryName, prNumber))
+                .thenReturn(Arrays.asList());
+
+        // when
+        List<ChangedFileDto> result = pullRequestService.getPullRequestWithChanges(ownerLogin, repositoryName, prNumber, accessToken);
+
+        // then
+        assertTrue(result.isEmpty());
+        assertEquals(0, result.size());
+
+        // Repository와 GithubService 메서드 호출 검증
+        verify(pullRequestRepository).findByRepositoryNameAndOwnerLoginAndPrNumber(repositoryName, ownerLogin, prNumber);
+        verify(githubService).getChangedFiles(accessToken, ownerLogin, repositoryName, prNumber);
+    }
+
+    @Test
+    void getPullRequestWithChanges_GitHubAPI호출실패_예외전파() {
+        // given
+        String ownerLogin = "test-owner";
+        String repositoryName = "test-repo";
+        Integer prNumber = 123;
+        String accessToken = "test-access-token";
+
+        // 테스트용 PR 엔티티 생성
+        PullRequest pullRequest = PullRequest.builder()
+                .prNumber(prNumber)
+                .repositoryName(repositoryName)
+                .ownerLogin(ownerLogin)
+                .title("Test PR")
+                .action("opened")
+                .status(PullRequest.ReviewStatus.PENDING)
+                .build();
+
+        // Repository mock 설정
+        when(pullRequestRepository.findByRepositoryNameAndOwnerLoginAndPrNumber(repositoryName, ownerLogin, prNumber))
+                .thenReturn(Optional.of(pullRequest));
+
+        // GithubService에서 예외 발생
+        when(githubService.getChangedFiles(accessToken, ownerLogin, repositoryName, prNumber))
+                .thenThrow(new RuntimeException("GitHub API call failed"));
+
+        // when & then
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> pullRequestService.getPullRequestWithChanges(ownerLogin, repositoryName, prNumber, accessToken));
+
+        assertEquals("GitHub API call failed", exception.getMessage());
+
+        // Repository와 GithubService 메서드 호출 검증
+        verify(pullRequestRepository).findByRepositoryNameAndOwnerLoginAndPrNumber(repositoryName, ownerLogin, prNumber);
+        verify(githubService).getChangedFiles(accessToken, ownerLogin, repositoryName, prNumber);
+    }
+
+    @Test
+    void getPullRequestWithChanges_다른저장소의PR_예외발생() {
+        // given
+        String ownerLogin = "test-owner";
+        String repositoryName = "test-repo";
+        String differentRepository = "different-repo";
+        Integer prNumber = 123;
+        String accessToken = "test-access-token";
+
+        // Repository에서 PR을 찾지 못함 (다른 저장소)
+        when(pullRequestRepository.findByRepositoryNameAndOwnerLoginAndPrNumber(differentRepository, ownerLogin, prNumber))
+                .thenReturn(Optional.empty());
+
+        // when & then
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> pullRequestService.getPullRequestWithChanges(ownerLogin, differentRepository, prNumber, accessToken));
+
+        assertEquals("Pull request not found", exception.getMessage());
+
+        // Repository 메서드 호출 검증
+        verify(pullRequestRepository).findByRepositoryNameAndOwnerLoginAndPrNumber(differentRepository, ownerLogin, prNumber);
+        // GithubService는 호출되지 않아야 함
+        verify(githubService, never()).getChangedFiles(anyString(), anyString(), anyString(), anyInt());
     }
 
     private WebhookPayloadDto createWebhookPayload(String action, int prNumber, String title, String repoName, String ownerLogin) {
