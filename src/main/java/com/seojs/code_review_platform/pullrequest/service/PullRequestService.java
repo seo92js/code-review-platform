@@ -1,10 +1,10 @@
 package com.seojs.code_review_platform.pullrequest.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.seojs.code_review_platform.exception.PullRequestNotFoundEx;
 import com.seojs.code_review_platform.github.dto.ChangedFileDto;
 import com.seojs.code_review_platform.github.dto.WebhookPayloadDto;
 import com.seojs.code_review_platform.github.entity.GithubAccount;
-import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import com.seojs.code_review_platform.github.service.GithubService;
 import com.seojs.code_review_platform.pullrequest.dto.PullRequestResponseDto;
 import com.seojs.code_review_platform.pullrequest.entity.PullRequest;
@@ -18,9 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Service
 public class PullRequestService {
-
     private final PullRequestRepository pullRequestRepository;
-    private final GithubAccountRepository githubAccountRepository;
     private final GithubService githubService;
     private final ObjectMapper objectMapper;
 
@@ -45,7 +43,7 @@ public class PullRequestService {
     /**
      * 특정 저장소의 PR 목록 조회
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public List<PullRequestResponseDto> getPullRequestList(String loginId, String repositoryName) {
         return pullRequestRepository.findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId, repositoryName).stream()
         .map(PullRequestResponseDto::fromEntity)
@@ -55,14 +53,22 @@ public class PullRequestService {
     /**
      * PR 변경된 파일 목록 조회
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ChangedFileDto> getPullRequestWithChanges(String loginId, String repositoryName, Integer prNumber, String accessToken) {
-        PullRequest pullRequest = pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber)
-        .orElseThrow(() -> new RuntimeException("Pull request not found"));
+        findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId, prNumber);
 
         List<ChangedFileDto> changedFiles = githubService.getChangedFiles(accessToken, loginId, repositoryName, prNumber);
 
         return changedFiles;
+    }
+
+    /**
+     * 특정 저장소의 특정 PR 번호로 조회 - 존재하지 않으면 예외 발생
+     */
+    @Transactional(readOnly = true)
+    public PullRequest findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(String repositoryName, String loginId, Integer prNumber) {
+        return pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber)
+            .orElseThrow(() -> new PullRequestNotFoundEx("Pull request not found for repositoryName: " + repositoryName + ", loginId: " + loginId + ", prNumber: " + prNumber));
     }
 
     /**
@@ -107,8 +113,7 @@ public class PullRequestService {
      * 새 PR 생성
      */
     private void createNewPullRequest(String repoName, String loginId, Integer prNumber, String action, String title) {
-        GithubAccount githubAccount = githubAccountRepository.findByLoginId(loginId)
-                .orElseThrow(() -> new RuntimeException("GithubAccount not found for login: " + loginId));
+        GithubAccount githubAccount = githubService.findByLoginIdOrThrow(loginId);
 
         PullRequest newPr = PullRequest.builder()
                 .repositoryName(repoName)

@@ -7,12 +7,12 @@ import com.seojs.code_review_platform.github.dto.WebhookPayloadDto.PullRequestDt
 import com.seojs.code_review_platform.github.dto.WebhookPayloadDto.RepositoryDto;
 import com.seojs.code_review_platform.github.dto.WebhookPayloadDto.UserDto;
 import com.seojs.code_review_platform.github.entity.GithubAccount;
-import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import com.seojs.code_review_platform.github.service.GithubService;
 import com.seojs.code_review_platform.pullrequest.dto.PullRequestResponseDto;
 import com.seojs.code_review_platform.pullrequest.entity.PullRequest;
 import com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository;
 import com.seojs.code_review_platform.pullrequest.service.PullRequestService;
+import com.seojs.code_review_platform.exception.PullRequestNotFoundEx;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -32,9 +32,6 @@ class PullRequestServiceTest {
     private PullRequestRepository pullRequestRepository;
 
     @Mock
-    private GithubAccountRepository githubAccountRepository;
-
-    @Mock
     private GithubService githubService;
 
     @Mock
@@ -45,7 +42,7 @@ class PullRequestServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        pullRequestService = new PullRequestService(pullRequestRepository, githubAccountRepository, githubService, objectMapper);
+        pullRequestService = new PullRequestService(pullRequestRepository, githubService, objectMapper);
     }
 
     @Test
@@ -239,13 +236,13 @@ class PullRequestServiceTest {
         when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber("test-repo", "test-owner", 1))
                 .thenReturn(Optional.empty());
 
-        // GithubAccount mock 설정
+        // GithubService mock 설정
         GithubAccount githubAccount = GithubAccount.builder()
                 .loginId("test-owner")
                 .accessToken("test-token")
                 .build();
-        when(githubAccountRepository.findByLoginId("test-owner"))
-                .thenReturn(Optional.of(githubAccount));
+        when(githubService.findByLoginIdOrThrow("test-owner"))
+                .thenReturn(githubAccount);
 
         // when
         pullRequestService.processAndSaveWebhook(payload);
@@ -440,10 +437,10 @@ class PullRequestServiceTest {
                 .thenReturn(Optional.empty());
 
         // when & then
-        RuntimeException exception = assertThrows(RuntimeException.class,
+        PullRequestNotFoundEx exception = assertThrows(PullRequestNotFoundEx.class,
                 () -> pullRequestService.getPullRequestWithChanges(loginId, repositoryName, prNumber, accessToken));
 
-        assertEquals("Pull request not found", exception.getMessage());
+        assertEquals("Pull request not found for repositoryName: test-repo, loginId: test-owner, prNumber: 999", exception.getMessage());
         
         // Repository 메서드 호출 검증
         verify(pullRequestRepository).findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber);
@@ -552,10 +549,10 @@ class PullRequestServiceTest {
                 .thenReturn(Optional.empty());
 
         // when & then
-        RuntimeException exception = assertThrows(RuntimeException.class,
+        PullRequestNotFoundEx exception = assertThrows(PullRequestNotFoundEx.class,
                 () -> pullRequestService.getPullRequestWithChanges(loginId, differentRepository, prNumber, accessToken));
 
-        assertEquals("Pull request not found", exception.getMessage());
+        assertEquals("Pull request not found for repositoryName: different-repo, loginId: test-owner, prNumber: 123", exception.getMessage());
 
         // Repository 메서드 호출 검증
         verify(pullRequestRepository).findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(differentRepository, loginId, prNumber);
