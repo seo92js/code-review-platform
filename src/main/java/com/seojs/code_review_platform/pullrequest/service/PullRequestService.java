@@ -1,7 +1,9 @@
 package com.seojs.code_review_platform.pullrequest.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.seojs.code_review_platform.github.dto.ChangedFileDto;
 import com.seojs.code_review_platform.github.dto.WebhookPayloadDto;
+import com.seojs.code_review_platform.github.service.GithubService;
 import com.seojs.code_review_platform.pullrequest.dto.PullRequestResponseDto;
 import com.seojs.code_review_platform.pullrequest.entity.PullRequest;
 import com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository;
@@ -16,6 +18,7 @@ import java.util.List;
 public class PullRequestService {
 
     private final PullRequestRepository pullRequestRepository;
+    private final GithubService githubService;
     private final ObjectMapper objectMapper;
 
     /**
@@ -44,6 +47,19 @@ public class PullRequestService {
         return pullRequestRepository.findByOwnerLoginAndRepositoryNameOrderByUpdatedAtDesc(ownerLogin, repositoryName).stream()
         .map(PullRequestResponseDto::fromEntity)
         .toList();
+    }
+
+    /**
+     * PR 변경된 파일 목록 조회
+     */
+    @Transactional
+    public List<ChangedFileDto> getPullRequestWithChanges(String ownerLogin, String repositoryName, Integer prNumber, String accessToken) {
+        PullRequest pullRequest = pullRequestRepository.findByRepositoryNameAndOwnerLoginAndPrNumber(repositoryName, ownerLogin, prNumber)
+        .orElseThrow(() -> new RuntimeException("Pull request not found"));
+
+        List<ChangedFileDto> changedFiles = githubService.getChangedFiles(accessToken, ownerLogin, repositoryName, prNumber);
+
+        return changedFiles;
     }
 
     /**
@@ -87,8 +103,7 @@ public class PullRequestService {
     /**
      * 새 PR 생성
      */
-    private void createNewPullRequest(String repoName, String ownerLogin, Integer prNumber, 
-                                   String action, String title) {
+    private void createNewPullRequest(String repoName, String ownerLogin, Integer prNumber, String action, String title) {
         PullRequest newPr = PullRequest.builder()
                 .repositoryName(repoName)
                 .ownerLogin(ownerLogin)
