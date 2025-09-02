@@ -13,11 +13,10 @@ public interface PullRequestRepository extends JpaRepository<PullRequest, Long> 
     /**
      * 특정 저장소의 특정 PR 번호로 조회
      */
-    Optional<PullRequest> findByRepositoryNameAndOwnerLoginAndPrNumber(
-            String repositoryName, String ownerLogin, Integer prNumber);
+    Optional<PullRequest> findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(String repositoryName, String loginId, Integer prNumber);
 
     /**
      * 특정 저장소의 모든 PR 조회
      */
-    List<PullRequest> findByOwnerLoginAndRepositoryNameOrderByUpdatedAtDesc(String ownerLogin, String repositoryName);
+    List<PullRequest> findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(String loginId, String repositoryName);
 } 

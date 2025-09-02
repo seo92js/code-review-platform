@@ -3,6 +3,8 @@ package com.seojs.code_review_platform.pullrequest.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seojs.code_review_platform.github.dto.ChangedFileDto;
 import com.seojs.code_review_platform.github.dto.WebhookPayloadDto;
+import com.seojs.code_review_platform.github.entity.GithubAccount;
+import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import com.seojs.code_review_platform.github.service.GithubService;
 import com.seojs.code_review_platform.pullrequest.dto.PullRequestResponseDto;
 import com.seojs.code_review_platform.pullrequest.entity.PullRequest;
@@ -18,6 +20,7 @@ import java.util.List;
 public class PullRequestService {
 
     private final PullRequestRepository pullRequestRepository;
+    private final GithubAccountRepository githubAccountRepository;
     private final GithubService githubService;
     private final ObjectMapper objectMapper;
 
@@ -43,8 +46,8 @@ public class PullRequestService {
      * 특정 저장소의 PR 목록 조회
      */
     @Transactional
-    public List<PullRequestResponseDto> getPullRequestList(String ownerLogin, String repositoryName) {
-        return pullRequestRepository.findByOwnerLoginAndRepositoryNameOrderByUpdatedAtDesc(ownerLogin, repositoryName).stream()
+    public List<PullRequestResponseDto> getPullRequestList(String loginId, String repositoryName) {
+        return pullRequestRepository.findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId, repositoryName).stream()
         .map(PullRequestResponseDto::fromEntity)
         .toList();
     }
@@ -53,11 +56,11 @@ public class PullRequestService {
      * PR 변경된 파일 목록 조회
      */
     @Transactional
-    public List<ChangedFileDto> getPullRequestWithChanges(String ownerLogin, String repositoryName, Integer prNumber, String accessToken) {
-        PullRequest pullRequest = pullRequestRepository.findByRepositoryNameAndOwnerLoginAndPrNumber(repositoryName, ownerLogin, prNumber)
+    public List<ChangedFileDto> getPullRequestWithChanges(String loginId, String repositoryName, Integer prNumber, String accessToken) {
+        PullRequest pullRequest = pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber)
         .orElseThrow(() -> new RuntimeException("Pull request not found"));
 
-        List<ChangedFileDto> changedFiles = githubService.getChangedFiles(accessToken, ownerLogin, repositoryName, prNumber);
+        List<ChangedFileDto> changedFiles = githubService.getChangedFiles(accessToken, loginId, repositoryName, prNumber);
 
         return changedFiles;
     }
@@ -74,19 +77,19 @@ public class PullRequestService {
      */
     private void savePullRequest(WebhookPayloadDto webhookPayload) {
         String repoName = webhookPayload.getRepository().getName();
-        String ownerLogin = webhookPayload.getRepository().getOwner().getLogin();
+        String loginId = webhookPayload.getRepository().getOwner().getLogin();
         Integer prNumber = webhookPayload.getPullRequest().getNumber();
         String action = webhookPayload.getAction();
         String title = webhookPayload.getPullRequest().getTitle();
 
         PullRequest existingPr = pullRequestRepository
-                .findByRepositoryNameAndOwnerLoginAndPrNumber(repoName, ownerLogin, prNumber)
+                .findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repoName, loginId, prNumber)
                 .orElse(null);
 
         if (existingPr != null) {
             updateExistingPullRequest(existingPr, action);
         } else {
-            createNewPullRequest(repoName, ownerLogin, prNumber, action, title);
+            createNewPullRequest(repoName, loginId, prNumber, action, title);
         }
     }
 
@@ -103,10 +106,13 @@ public class PullRequestService {
     /**
      * 새 PR 생성
      */
-    private void createNewPullRequest(String repoName, String ownerLogin, Integer prNumber, String action, String title) {
+    private void createNewPullRequest(String repoName, String loginId, Integer prNumber, String action, String title) {
+        GithubAccount githubAccount = githubAccountRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new RuntimeException("GithubAccount not found for login: " + loginId));
+
         PullRequest newPr = PullRequest.builder()
                 .repositoryName(repoName)
-                .ownerLogin(ownerLogin)
+                .githubAccount(githubAccount)
                 .prNumber(prNumber)
                 .action(action)
                 .title(title)
