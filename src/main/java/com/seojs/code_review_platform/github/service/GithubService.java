@@ -5,7 +5,6 @@ import com.seojs.code_review_platform.github.dto.GitRepositoryResponseDto;
 import com.seojs.code_review_platform.github.dto.GitRepositoryWithWebhookResponseDto;
 import com.seojs.code_review_platform.github.dto.WebhookCreateRequestDto;
 import com.seojs.code_review_platform.github.dto.WebhookResponseDto;
-import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +25,7 @@ public class GithubService {
 
     private final RestTemplate restTemplate;
     private final GithubAccountRepository githubAccountRepository;
+    private final TokenEncryptionService tokenEncryptionService;
 
     @Value("${github.webhook.url}")
     private String webhookUrl;
@@ -122,7 +122,7 @@ public class GithubService {
      */
     public String findAccessTokenByOwner(String owner) {
         return githubAccountRepository.findByLoginId(owner)
-                .map(GithubAccount::getAccessToken)
+                .map(account -> tokenEncryptionService.decryptToken(account.getAccessToken()))
                 .orElseThrow(() -> new RuntimeException("No accessToken for owner: " + owner));
     }
     

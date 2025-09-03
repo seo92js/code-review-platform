@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private final GithubAccountRepository githubAccountRepository;
+    private final TokenEncryptionService tokenEncryptionService;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) {
@@ -19,12 +20,13 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String accessToken = userRequest.getAccessToken().getTokenValue();
         String loginId = oAuth2User.getAttribute("login");
         if (loginId != null && accessToken != null) {
+            String encryptedToken = tokenEncryptionService.encryptToken(accessToken);
             githubAccountRepository.findByLoginId(loginId)
                 .ifPresentOrElse(
                     account -> {
-                        account.updateAccessToken(accessToken);},
+                        account.updateAccessToken(encryptedToken);},
                     () -> {
-                        GithubAccount newAccount = GithubAccount.builder().loginId(loginId).accessToken(accessToken).build();
+                        GithubAccount newAccount = GithubAccount.builder().loginId(loginId).accessToken(encryptedToken).build();
                         githubAccountRepository.save(newAccount);
                     }
                 );
