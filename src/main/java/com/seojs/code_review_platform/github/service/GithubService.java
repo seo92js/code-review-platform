@@ -1,5 +1,6 @@
 package com.seojs.code_review_platform.github.service;
 
+import com.seojs.code_review_platform.exception.GithubAccountNotFoundEx;
 import com.seojs.code_review_platform.github.dto.ChangedFileDto;
 import com.seojs.code_review_platform.github.dto.GitRepositoryResponseDto;
 import com.seojs.code_review_platform.github.dto.GitRepositoryWithWebhookResponseDto;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Arrays;
@@ -118,12 +120,22 @@ public class GithubService {
     }
 
     /**
-     * owner(login)으로 accessToken 조회
+     * 로그인 아이디로 accessToken 조회
      */
-    public String findAccessTokenByOwner(String owner) {
-        return githubAccountRepository.findByLoginId(owner)
+    @Transactional(readOnly = true)
+    public String findAccessTokenByLoginId(String loginId) {
+        return githubAccountRepository.findByLoginId(loginId)
                 .map(GithubAccount::getAccessToken)
-                .orElseThrow(() -> new RuntimeException("No accessToken for owner: " + owner));
+                .orElseThrow(() -> new GithubAccountNotFoundEx("No accessToken for loginId: " + loginId));
+    }
+
+    /**
+     * 로그인 아이디로 GithubAccount 조회 - 존재하지 않으면 예외 발생
+     */
+    @Transactional(readOnly = true)
+    public GithubAccount findByLoginIdOrThrow(String loginId) {
+        return githubAccountRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new GithubAccountNotFoundEx("GithubAccount not found for loginId: " + loginId));
     }
     
     /**
