@@ -7,6 +7,7 @@ import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import com.seojs.code_review_platform.github.service.GithubService;
 import com.seojs.code_review_platform.github.service.TokenEncryptionService;
+import com.seojs.code_review_platform.exception.GithubAccountNotFoundEx;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -217,41 +218,41 @@ class GithubServiceTest {
     }
 
     @Test
-    void findAccessTokenByOwner_성공() {
+    void findAccessTokenByLoginId_성공() {
         // given
-        String owner = "test-owner";
+        String loginId = "test-owner";
         String encryptedToken = "encrypted-token";
         String decryptedToken = "test-access-token";
         
         GithubAccount account = GithubAccount.builder()
-                .loginId(owner)
+                .loginId(loginId)
                 .accessToken(encryptedToken)
                 .build();
 
-        when(githubAccountRepository.findByLoginId(owner))
+        when(githubAccountRepository.findByLoginId(loginId))
                 .thenReturn(Optional.of(account));
         when(tokenEncryptionService.decryptToken(encryptedToken))
                 .thenReturn(decryptedToken);
 
         // when
-        String result = githubService.findAccessTokenByOwner(owner);
+        String result = githubService.findAccessTokenByLoginId(loginId);
 
         // then
         assertEquals(decryptedToken, result);
     }
 
     @Test
-    void findAccessTokenByOwner_계정없을시_예외발생() {
+    void findAccessTokenByLoginId_계정없을시_예외발생() {
         // given
-        String owner = "non-existent-owner";
+        String loginId = "non-existent-owner";
 
-        when(githubAccountRepository.findByLoginId(owner))
+        when(githubAccountRepository.findByLoginId(loginId))
                 .thenReturn(Optional.empty());
 
         // when & then
-        RuntimeException exception = assertThrows(RuntimeException.class, 
-                () -> githubService.findAccessTokenByOwner(owner));
+        GithubAccountNotFoundEx exception = assertThrows(GithubAccountNotFoundEx.class, 
+                () -> githubService.findAccessTokenByLoginId(loginId));
         
-        assertEquals("No accessToken for owner: " + owner, exception.getMessage());
+        assertEquals("No accessToken for loginId: " + loginId, exception.getMessage());
     }
 }

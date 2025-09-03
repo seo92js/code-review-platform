@@ -18,4 +18,22 @@ public class ExceptionRestControllerAdvice {
         log.error("{} : {}", errorCode, message);
         return new ErrorDto(errorCode, message);
     }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(GithubAccountNotFoundEx.class)
+    public ErrorDto githubAccountNotFound(GithubAccountNotFoundEx e) {
+        String errorCode = "GITHUB_ACCOUNT_NOT_FOUND";
+        String message = e.getMessage();
+        log.error("{} : {}", errorCode, message);
+        return new ErrorDto(errorCode, message);
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(PullRequestNotFoundEx.class)
+    public ErrorDto pullRequestNotFound(PullRequestNotFoundEx e) {
+        String errorCode = "PULL_REQUEST_NOT_FOUND";
+        String message = e.getMessage();
+        log.error("{} : {}", errorCode, message);
+        return new ErrorDto(errorCode, message);
+    }
 }
