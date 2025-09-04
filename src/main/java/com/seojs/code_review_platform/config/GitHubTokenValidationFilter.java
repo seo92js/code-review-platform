@@ -29,9 +29,18 @@ public class GitHubTokenValidationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain chain) 
             throws IOException, ServletException {
         
+        String requestPath = request.getRequestURI();
+        
+        if (requestPath.startsWith("/h2-console/")) {
+            chain.doFilter(request, response);
+            return;
+        }
+        
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            chain.doFilter(request, response);
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            response.getWriter().write("{\"error\":\"UNAUTHORIZED\",\"message\":\"인증이 필요합니다.\"}");
+            response.setContentType("application/json");
             return;
         }
         
