@@ -7,6 +7,7 @@ import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserServ
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -15,6 +16,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private final TokenEncryptionService tokenEncryptionService;
 
     @Override
+    @Transactional
     public OAuth2User loadUser(OAuth2UserRequest userRequest) {
         OAuth2User oAuth2User = super.loadUser(userRequest);
         String accessToken = userRequest.getAccessToken().getTokenValue();
@@ -24,7 +26,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             githubAccountRepository.findByLoginId(loginId)
                 .ifPresentOrElse(
                     account -> {
-                        account.updateAccessToken(encryptedToken);},
+                        account.updateAccessToken(encryptedToken);
+                    },
                     () -> {
                         GithubAccount newAccount = GithubAccount.builder().loginId(loginId).accessToken(encryptedToken).build();
                         githubAccountRepository.save(newAccount);
