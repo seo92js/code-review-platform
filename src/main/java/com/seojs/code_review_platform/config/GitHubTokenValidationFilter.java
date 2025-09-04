@@ -31,7 +31,9 @@ public class GitHubTokenValidationFilter extends OncePerRequestFilter {
         
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            chain.doFilter(request, response);
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            response.getWriter().write("{\"error\":\"UNAUTHORIZED\",\"message\":\"인증이 필요합니다.\"}");
+            response.setContentType("application/json");
             return;
         }
         
