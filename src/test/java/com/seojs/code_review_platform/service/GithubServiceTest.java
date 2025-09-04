@@ -6,6 +6,7 @@ import com.seojs.code_review_platform.github.dto.WebhookResponseDto;
 import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import com.seojs.code_review_platform.github.service.GithubService;
+import com.seojs.code_review_platform.github.service.TokenEncryptionService;
 import com.seojs.code_review_platform.exception.GithubAccountNotFoundEx;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,12 +38,15 @@ class GithubServiceTest {
     @Mock
     private GithubAccountRepository githubAccountRepository;
 
+    @Mock
+    private TokenEncryptionService tokenEncryptionService;
+
     private GithubService githubService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        githubService = new GithubService(restTemplate, githubAccountRepository);
+        githubService = new GithubService(restTemplate, githubAccountRepository, tokenEncryptionService);
         // 테스트용 webhook URL 설정
         ReflectionTestUtils.setField(githubService, "webhookUrl", "http://test.com/webhook");
     }
@@ -217,21 +221,24 @@ class GithubServiceTest {
     void findAccessTokenByLoginId_성공() {
         // given
         String loginId = "test-owner";
-        String expectedToken = "test-access-token";
+        String encryptedToken = "encrypted-token";
+        String decryptedToken = "test-access-token";
         
         GithubAccount account = GithubAccount.builder()
                 .loginId(loginId)
-                .accessToken(expectedToken)
+                .accessToken(encryptedToken)
                 .build();
 
         when(githubAccountRepository.findByLoginId(loginId))
                 .thenReturn(Optional.of(account));
+        when(tokenEncryptionService.decryptToken(encryptedToken))
+                .thenReturn(decryptedToken);
 
         // when
         String result = githubService.findAccessTokenByLoginId(loginId);
 
         // then
-        assertEquals(expectedToken, result);
+        assertEquals(decryptedToken, result);
     }
 
     @Test

@@ -28,6 +28,7 @@ public class GithubService {
 
     private final RestTemplate restTemplate;
     private final GithubAccountRepository githubAccountRepository;
+    private final TokenEncryptionService tokenEncryptionService;
 
     @Value("${github.webhook.url}")
     private String webhookUrl;
@@ -125,7 +126,7 @@ public class GithubService {
     @Transactional(readOnly = true)
     public String findAccessTokenByLoginId(String loginId) {
         return githubAccountRepository.findByLoginId(loginId)
-                .map(GithubAccount::getAccessToken)
+                .map(account -> tokenEncryptionService.decryptToken(account.getAccessToken()))
                 .orElseThrow(() -> new GithubAccountNotFoundEx("No accessToken for loginId: " + loginId));
     }
 

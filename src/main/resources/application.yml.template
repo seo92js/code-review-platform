@@ -25,3 +25,7 @@ spring:
 github:
   webhook:
     url: YOUR_WEBHOOK_URL
+
+app:
+  encryption:
+    key: YOUR_SECRET_KEY
