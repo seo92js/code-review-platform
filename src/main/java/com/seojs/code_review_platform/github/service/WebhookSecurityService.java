@@ -48,20 +48,18 @@ public class WebhookSecurityService {
     /**
      * GitHub 웹훅 시그니처 검증
      */
-    public void isValidWebhookSignature(String payload, String signature, String userWebhookSecret) {
-        boolean isValid = true;
-        
+    public void isValidWebhookSignature(String payload, String signature, String userWebhookSecret) {        
         if (signature == null || signature.isEmpty()) {
-            isValid = false;
+            throw new SecurityException("Signature is null or empty");
         }
         
         if (userWebhookSecret == null || userWebhookSecret.isEmpty()) {
-            isValid = false;
+            throw new SecurityException("User webhook secret is null or empty");
         }
         
         // GitHub이 보낸 시그니처 형식: "sha256=..."
         if (!signature.startsWith("sha256=")) {
-            isValid = false;
+            throw new SecurityException("Invalid signature format");
         }
         
         // 예상 시그니처 생성
@@ -69,7 +67,7 @@ public class WebhookSecurityService {
             calculateHmacSha256(userWebhookSecret, payload);
         
         // 시그니처 비교
-        isValid = MessageDigest.isEqual(
+        boolean isValid = MessageDigest.isEqual(
             expectedSignature.getBytes(StandardCharsets.UTF_8),
             signature.getBytes(StandardCharsets.UTF_8)
         );
@@ -78,7 +76,6 @@ public class WebhookSecurityService {
             throw new SecurityException("Invalid webhook signature");
         }
     }
-    
     
     /**
      * HMAC-SHA256 계산

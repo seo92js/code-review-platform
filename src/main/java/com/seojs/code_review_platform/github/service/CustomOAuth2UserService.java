@@ -9,7 +9,8 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
+import java.security.SecureRandom;
+import java.util.Base64;
 
 @Service
 @RequiredArgsConstructor
@@ -48,6 +49,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
      * 웹훅 시크릿 생성
      */
     private String generateWebhookSecret() {
-        return UUID.randomUUID().toString() + System.currentTimeMillis();
+        SecureRandom secureRandom = new SecureRandom();
+        byte[] randomBytes = new byte[32];
+        secureRandom.nextBytes(randomBytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
     }
 }
