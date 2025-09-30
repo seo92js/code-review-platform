@@ -8,6 +8,7 @@ import com.seojs.code_review_platform.github.dto.WebhookPayloadDto.RepositoryDto
 import com.seojs.code_review_platform.github.dto.WebhookPayloadDto.UserDto;
 import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.service.GithubService;
+import com.seojs.code_review_platform.github.service.WebhookSecurityService;
 import com.seojs.code_review_platform.pullrequest.dto.PullRequestResponseDto;
 import com.seojs.code_review_platform.pullrequest.entity.PullRequest;
 import com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository;
@@ -35,6 +36,9 @@ class PullRequestServiceTest {
     private GithubService githubService;
 
     @Mock
+    private WebhookSecurityService webhookSecurityService;
+
+    @Mock
     private ObjectMapper objectMapper;
 
     private PullRequestService pullRequestService;
@@ -42,7 +46,7 @@ class PullRequestServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        pullRequestService = new PullRequestService(pullRequestRepository, githubService, objectMapper);
+        pullRequestService = new PullRequestService(pullRequestRepository, githubService, webhookSecurityService, objectMapper);
     }
 
     @Test
@@ -245,7 +249,7 @@ class PullRequestServiceTest {
                 .thenReturn(githubAccount);
 
         // when
-        pullRequestService.processAndSaveWebhook(payload);
+        pullRequestService.processAndSaveWebhook(payload, "sha256=test-signature");
 
         // then
         ArgumentCaptor<PullRequest> prCaptor = ArgumentCaptor.forClass(PullRequest.class);
@@ -289,7 +293,7 @@ class PullRequestServiceTest {
                 .thenReturn(Optional.of(existingPr));
 
         // when
-        pullRequestService.processAndSaveWebhook(payload);
+        pullRequestService.processAndSaveWebhook(payload, "sha256=test-signature");
 
         // then
         verify(pullRequestRepository).save(existingPr);
@@ -308,7 +312,7 @@ class PullRequestServiceTest {
                 .thenReturn(webhookPayload);
 
         // when
-        pullRequestService.processAndSaveWebhook(payload);
+        pullRequestService.processAndSaveWebhook(payload, "sha256=test-signature");
 
         // then
         verify(pullRequestRepository, never()).save(any());
@@ -324,7 +328,7 @@ class PullRequestServiceTest {
 
         // when & then
         RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> pullRequestService.processAndSaveWebhook(invalidPayload));
+                () -> pullRequestService.processAndSaveWebhook(invalidPayload, "sha256=test-signature"));
 
         assertEquals("Webhook processing failed", exception.getMessage());
     }

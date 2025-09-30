@@ -1,5 +1,6 @@
 package com.seojs.code_review_platform.github.service;
 
+import com.seojs.code_review_platform.exception.TokenEncryptionEx;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +29,7 @@ public class TokenEncryptionService {
             byte[] encryptedBytes = cipher.doFinal(token.getBytes(StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(encryptedBytes);
         } catch (Exception e) {
-            throw new RuntimeException("토큰 암호화 실패", e);
+            throw new TokenEncryptionEx("Token encryption failed", e);
         }
     }
     
@@ -44,7 +45,7 @@ public class TokenEncryptionService {
             byte[] decryptedBytes = cipher.doFinal(decodedBytes);
             return new String(decryptedBytes, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            throw new RuntimeException("토큰 복호화 실패", e);
+            throw new TokenEncryptionEx("Token decryption failed", e);
         }
     }
 }

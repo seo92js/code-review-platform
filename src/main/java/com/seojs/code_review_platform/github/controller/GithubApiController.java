@@ -43,9 +43,11 @@ public class GithubApiController {
     }
 
     @PostMapping("/api/github/webhook/")
-    public void handleWebhook(@RequestBody String payload, @RequestHeader("X-Github-Event") String event) {
+    public void handleWebhook(@RequestBody String payload, 
+                            @RequestHeader("X-Github-Event") String event, 
+                            @RequestHeader(value = "X-Hub-Signature-256", required = false) String signature) {
         if (event.equals("pull_request")) {
-            pullRequestWebhookService.processAndSaveWebhook(payload);
+            pullRequestWebhookService.processAndSaveWebhook(payload, signature);
         }
     }
 
