@@ -3,7 +3,6 @@ package com.seojs.code_review_platform.github.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seojs.code_review_platform.github.entity.GithubAccount;
-import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,9 +20,7 @@ public class WebhookSecurityService {
     private final ObjectMapper objectMapper;
     
     /**
-     * 웹훅 시그니처 검증 (페이로드에서 소유자 추출)
-     * @param payload 웹훅 페이로드
-     * @param signature X-Hub-Signature-256 헤더 값
+     * 웹훅 시그니처 검증
      */
     public void validateWebhookSignature(String payload, String signature) {
         try {
@@ -49,7 +46,7 @@ public class WebhookSecurityService {
     }
 
     /**
-     * GitHub 웹훅 시그니처 검증 (사용자별 시크릿)
+     * GitHub 웹훅 시그니처 검증
      */
     public void isValidWebhookSignature(String payload, String signature, String userWebhookSecret) {
         boolean isValid = true;
@@ -71,7 +68,7 @@ public class WebhookSecurityService {
         String expectedSignature = "sha256=" + 
             calculateHmacSha256(userWebhookSecret, payload);
         
-        // 시그니처 비교 (타이밍 공격 방지를 위해 MessageDigest.isEqual 사용)
+        // 시그니처 비교
         isValid = MessageDigest.isEqual(
             expectedSignature.getBytes(StandardCharsets.UTF_8),
             signature.getBytes(StandardCharsets.UTF_8)
@@ -102,7 +99,7 @@ public class WebhookSecurityService {
             
             return result.toString();
         } catch (Exception e) {
-            throw new RuntimeException("HMAC calculation failed", e);
+            throw new SecurityException("HMAC calculation failed", e);
         }
     }
 }

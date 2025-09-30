@@ -45,4 +45,40 @@ public class ExceptionRestControllerAdvice {
         log.error("{} : {}", errorCode, message);
         return new ErrorDto(errorCode, message);
     }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(GitHubApiEx.class)
+    public ErrorDto gitHubApiException(GitHubApiEx e) {
+        String errorCode = "GITHUB_API_ERROR";
+        String message = e.getMessage();
+        log.error("{} : {}", errorCode, message);
+        return new ErrorDto(errorCode, message);
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(WebhookProcessingEx.class)
+    public ErrorDto webhookProcessingException(WebhookProcessingEx e) {
+        String errorCode = "WEBHOOK_PROCESSING_ERROR";
+        String message = e.getMessage();
+        log.error("{} : {}", errorCode, message);
+        return new ErrorDto(errorCode, message);
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(TokenEncryptionEx.class)
+    public ErrorDto tokenEncryptionException(TokenEncryptionEx e) {
+        String errorCode = "TOKEN_ENCRYPTION_ERROR";
+        String message = e.getMessage();
+        log.error("{} : {}", errorCode, message);
+        return new ErrorDto(errorCode, message);
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(WebhookRegistrationEx.class)
+    public ErrorDto webhookRegistrationException(WebhookRegistrationEx e) {
+        String errorCode = "WEBHOOK_REGISTRATION_ERROR";
+        String message = e.getMessage();
+        log.error("{} : {}", errorCode, message);
+        return new ErrorDto(errorCode, message);
+    }
 }

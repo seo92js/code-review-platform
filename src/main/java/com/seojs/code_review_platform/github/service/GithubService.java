@@ -1,6 +1,8 @@
 package com.seojs.code_review_platform.github.service;
 
 import com.seojs.code_review_platform.exception.GithubAccountNotFoundEx;
+import com.seojs.code_review_platform.exception.GitHubApiEx;
+import com.seojs.code_review_platform.exception.WebhookRegistrationEx;
 import com.seojs.code_review_platform.github.dto.ChangedFileDto;
 import com.seojs.code_review_platform.github.dto.GitRepositoryResponseDto;
 import com.seojs.code_review_platform.github.dto.GitRepositoryWithWebhookResponseDto;
@@ -138,7 +140,7 @@ public class GithubService {
             return changedFiles != null ? changedFiles : Collections.emptyList();
             
         } catch (Exception e) {
-            throw new RuntimeException("Failed to get changed files", e);
+            throw new GitHubApiEx("Failed to get changed files", e);
         }
     }
 
@@ -185,12 +187,11 @@ public class GithubService {
         
         try {
             ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
-            if (response.getStatusCode().is2xxSuccessful()) {
-            } else {
-                throw new RuntimeException("웹훅 등록 실패: " + response.getStatusCode());
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new WebhookRegistrationEx("Webhook registration failed: " + response.getStatusCode());
             }
         } catch (Exception e) {
-            throw new RuntimeException("웹훅 등록 중 오류 발생", e);
+            throw new WebhookRegistrationEx("Error occurred during webhook registration", e);
         }
     }
 }

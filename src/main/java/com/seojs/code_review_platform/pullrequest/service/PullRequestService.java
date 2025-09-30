@@ -1,6 +1,7 @@
 package com.seojs.code_review_platform.pullrequest.service;
 
 import com.seojs.code_review_platform.exception.PullRequestNotFoundEx;
+import com.seojs.code_review_platform.exception.WebhookProcessingEx;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seojs.code_review_platform.github.dto.ChangedFileDto;
 import com.seojs.code_review_platform.github.dto.WebhookPayloadDto;
@@ -46,7 +47,7 @@ public class PullRequestService {
                 savePullRequest(webhookPayload);
             }
         } catch (Exception e) {
-            throw new RuntimeException("Webhook processing failed", e);
+            throw new WebhookProcessingEx("Webhook processing failed", e);
         }
     }
 
