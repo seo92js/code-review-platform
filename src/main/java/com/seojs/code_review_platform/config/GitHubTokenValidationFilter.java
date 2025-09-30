@@ -26,15 +26,22 @@ public class GitHubTokenValidationFilter extends OncePerRequestFilter {
     }
     
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/h2-console") || 
+               path.startsWith("/api/github/webhook") ||
+               path.startsWith("/css/") ||
+               path.startsWith("/js/") ||
+               path.startsWith("/images/") ||
+               path.startsWith("/static/") ||
+               path.startsWith("/public/") ||
+               path.equals("/favicon.ico") ||
+               path.equals("/robots.txt");
+    }
+    
+    @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain chain) 
             throws IOException, ServletException {
-        
-        String requestPath = request.getRequestURI();
-        
-        if (requestPath.startsWith("/h2-console/")) {
-            chain.doFilter(request, response);
-            return;
-        }
         
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
