@@ -17,14 +17,18 @@ public class GithubAccount {
     @Column(nullable = false)
     private String accessToken;
 
+    @Column(nullable = false)
+    private String webhookSecret;
+
     public void updateAccessToken(String accessToken) {
         this.accessToken = accessToken;
     }
 
     @Builder
-    public GithubAccount(String loginId, String accessToken) {
+    public GithubAccount(String loginId, String accessToken, String webhookSecret) {
         this.loginId = loginId;
         this.accessToken = accessToken;
+        this.webhookSecret = webhookSecret;
     }
 }
 

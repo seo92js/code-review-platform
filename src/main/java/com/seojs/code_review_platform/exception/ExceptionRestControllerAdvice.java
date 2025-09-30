@@ -36,4 +36,13 @@ public class ExceptionRestControllerAdvice {
         log.error("{} : {}", errorCode, message);
         return new ErrorDto(errorCode, message);
     }
+
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ExceptionHandler(SecurityException.class)
+    public ErrorDto securityException(SecurityException e) {
+        String errorCode = "SECURITY_VIOLATION";
+        String message = e.getMessage();
+        log.error("{} : {}", errorCode, message);
+        return new ErrorDto(errorCode, message);
+    }
 }

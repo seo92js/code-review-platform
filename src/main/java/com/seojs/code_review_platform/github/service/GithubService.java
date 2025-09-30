@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -99,28 +98,6 @@ public class GithubService {
     }
 
     /**
-     * 저장소에 webhook 등록
-     */
-    public WebhookResponseDto registerWebhook(String accessToken, String owner, String repo) {
-        String url = String.format("https://api.github.com/repos/%s/%s/hooks", owner, repo);
-
-        WebhookCreateRequestDto dto = createWebhookRequest();
-        HttpHeaders headers = createAuthHeaders(accessToken);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<WebhookCreateRequestDto> entity = new HttpEntity<>(dto, headers);
-
-        ResponseEntity<WebhookResponseDto> response = restTemplate.exchange(
-                url,
-                HttpMethod.POST,
-                entity,
-                WebhookResponseDto.class
-        );
-
-        return response.getBody();
-    }
-
-    /**
      * 로그인 아이디로 accessToken 조회
      */
     @Transactional(readOnly = true)
@@ -177,13 +154,14 @@ public class GithubService {
     /**
      * Webhook 생성 요청 DTO 생성
      */
-    private WebhookCreateRequestDto createWebhookRequest() {
+    private WebhookCreateRequestDto createWebhookRequest(String webhookSecret) {
         Map<String, String> config = new HashMap<>();
         config.put("url", webhookUrl);
         config.put("content_type", "json");
         config.put("insecure_ssl", "0");
+        config.put("secret", webhookSecret);
 
-        List<String> events = Arrays.asList("push", "pull_request");
+        List<String> events = List.of("push", "pull_request");
 
         return WebhookCreateRequestDto.builder()
                 .name("web")
@@ -191,5 +169,28 @@ public class GithubService {
                 .events(events)
                 .active(true)
                 .build();
+    }
+    
+    /**
+     * 웹훅 등록
+     */
+    public void registerWebhook(String accessToken, String owner, String repository) {
+        GithubAccount account = findByLoginIdOrThrow(owner);
+
+        String url = String.format("https://api.github.com/repos/%s/%s/hooks", owner, repository);
+        
+        WebhookCreateRequestDto request = createWebhookRequest(account.getWebhookSecret());
+        HttpHeaders headers = createAuthHeaders(accessToken);
+        HttpEntity<WebhookCreateRequestDto> entity = new HttpEntity<>(request, headers);
+        
+        try {
+            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+            if (response.getStatusCode().is2xxSuccessful()) {
+            } else {
+                throw new RuntimeException("웹훅 등록 실패: " + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("웹훅 등록 중 오류 발생", e);
+        }
     }
 }

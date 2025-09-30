@@ -1,11 +1,12 @@
 package com.seojs.code_review_platform.pullrequest.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seojs.code_review_platform.exception.PullRequestNotFoundEx;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seojs.code_review_platform.github.dto.ChangedFileDto;
 import com.seojs.code_review_platform.github.dto.WebhookPayloadDto;
 import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.service.GithubService;
+import com.seojs.code_review_platform.github.service.WebhookSecurityService;
 import com.seojs.code_review_platform.pullrequest.dto.PullRequestResponseDto;
 import com.seojs.code_review_platform.pullrequest.entity.PullRequest;
 import com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository;
@@ -20,13 +21,22 @@ import java.util.List;
 public class PullRequestService {
     private final PullRequestRepository pullRequestRepository;
     private final GithubService githubService;
+    private final WebhookSecurityService webhookSecurityService;
     private final ObjectMapper objectMapper;
 
     /**
      * PR 웹훅 이벤트를 처리하고 데이터베이스에 저장
      */
     @Transactional
-    public void processAndSaveWebhook(String payload) {
+    public void processAndSaveWebhook(String payload, String signature) {
+        webhookSecurityService.validateWebhookSignature(payload, signature);
+        processWebhookPayload(payload);
+    }
+    
+    /**
+     * 웹훅 페이로드 처리
+     */
+    private void processWebhookPayload(String payload) {
         try {
             WebhookPayloadDto webhookPayload = objectMapper.readValue(payload, WebhookPayloadDto.class);
             String action = webhookPayload.getAction();

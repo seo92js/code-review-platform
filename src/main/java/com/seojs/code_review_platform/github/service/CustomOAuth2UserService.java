@@ -9,6 +9,8 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
@@ -29,11 +31,23 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                         account.updateAccessToken(encryptedToken);
                     },
                     () -> {
-                        GithubAccount newAccount = GithubAccount.builder().loginId(loginId).accessToken(encryptedToken).build();
+                        String webhookSecret = generateWebhookSecret();
+                        GithubAccount newAccount = GithubAccount.builder()
+                            .loginId(loginId)
+                            .accessToken(encryptedToken)
+                            .webhookSecret(webhookSecret)
+                            .build();
                         githubAccountRepository.save(newAccount);
                     }
                 );
         }
         return oAuth2User;
+    }
+    
+    /**
+     * 웹훅 시크릿 생성
+     */
+    private String generateWebhookSecret() {
+        return UUID.randomUUID().toString() + System.currentTimeMillis();
     }
 }
