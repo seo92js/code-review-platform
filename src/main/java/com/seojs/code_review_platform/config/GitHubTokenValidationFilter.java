@@ -1,5 +1,6 @@
 package com.seojs.code_review_platform.config;
 
+import com.seojs.code_review_platform.exception.InvalidGithubTokenException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,18 +46,12 @@ public class GitHubTokenValidationFilter extends OncePerRequestFilter {
         
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.getWriter().write("{\"error\":\"UNAUTHORIZED\",\"message\":\"인증이 필요합니다.\"}");
-            response.setContentType("application/json");
-            return;
+            throw new InvalidGithubTokenException("Authentication is required.");
         }
         
         // 인증된 요청만 GitHub 토큰 검증
         if (!isGitHubTokenValid()) {
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.getWriter().write("{\"error\":\"TOKEN_EXPIRED\",\"message\":\"GitHub 토큰이 만료되었습니다. 재인증이 필요합니다.\"}");
-            response.setContentType("application/json");
-            return;
+            throw new InvalidGithubTokenException("GitHub token is expired or invalid. Please re-authenticate.");
         }
         
         chain.doFilter(request, response);
