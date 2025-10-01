@@ -81,4 +81,13 @@ public class ExceptionRestControllerAdvice {
         log.error("{} : {}", errorCode, message);
         return new ErrorDto(errorCode, message);
     }
+
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ExceptionHandler(InvalidGithubTokenException.class)
+    public ErrorDto invalidGithubToken(InvalidGithubTokenException e) {
+        String errorCode = "INVALID_GITHUB_TOKEN";
+        String message = e.getMessage();
+        log.error("{} : {}", errorCode, message);
+        return new ErrorDto(errorCode, message);
+    }
 }
