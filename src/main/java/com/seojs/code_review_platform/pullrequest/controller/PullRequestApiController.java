@@ -7,6 +7,7 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -35,5 +36,14 @@ public class PullRequestApiController {
         String loginId = principal.getAttribute("login");
 
         return pullRequestService.getPullRequestWithChanges(loginId, repository, prNumber, accessToken);
+    }
+
+    @PostMapping("/api/pull-request/review")
+    public void reviewPullRequest(@AuthenticationPrincipal OAuth2User principal, @RequestParam String repository, @RequestParam Integer prNumber) {
+        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github", principal.getName());
+        String accessToken = authorizedClient.getAccessToken().getTokenValue();
+        String loginId = principal.getAttribute("login");
+
+        pullRequestService.review(loginId, repository, prNumber, accessToken);
     }
 }

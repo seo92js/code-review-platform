@@ -9,9 +9,12 @@ import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.service.GithubService;
 import com.seojs.code_review_platform.github.service.WebhookSecurityService;
 import com.seojs.code_review_platform.pullrequest.dto.PullRequestResponseDto;
+import com.seojs.code_review_platform.pullrequest.dto.ReviewRequestDto;
 import com.seojs.code_review_platform.pullrequest.entity.PullRequest;
+import com.seojs.code_review_platform.pullrequest.entity.PullRequest.ReviewStatus;
 import com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +27,7 @@ public class PullRequestService {
     private final GithubService githubService;
     private final WebhookSecurityService webhookSecurityService;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * PR 웹훅 이벤트를 처리하고 데이터베이스에 저장
@@ -67,19 +71,40 @@ public class PullRequestService {
     @Transactional(readOnly = true)
     public List<ChangedFileDto> getPullRequestWithChanges(String loginId, String repositoryName, Integer prNumber, String accessToken) {
         findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId, prNumber);
-
-        List<ChangedFileDto> changedFiles = githubService.getChangedFiles(accessToken, loginId, repositoryName, prNumber);
-
-        return changedFiles;
+        return githubService.getChangedFiles(accessToken, loginId, repositoryName, prNumber);
     }
 
     /**
      * 특정 저장소의 특정 PR 번호로 조회 - 존재하지 않으면 예외 발생
      */
-    @Transactional(readOnly = true)
-    public PullRequest findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(String repositoryName, String loginId, Integer prNumber) {
+    private PullRequest findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(String repositoryName, String loginId, Integer prNumber) {
         return pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber)
             .orElseThrow(() -> new PullRequestNotFoundEx("Pull request not found for repositoryName: " + repositoryName + ", loginId: " + loginId + ", prNumber: " + prNumber));
+    }
+
+    /**
+     * ai 리뷰 시작
+     */
+    @Transactional
+    public void review(String loginId, String repositoryName, Integer prNumber, String accessToken) {
+        PullRequest pr = findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId, prNumber);
+
+        List<ChangedFileDto> changedFiles = githubService.getChangedFiles(accessToken, loginId, repositoryName, prNumber);
+
+        pr.updateStatus(ReviewStatus.PENDING);
+
+        // LLM 호출은 이벤트 리스너에서 수행
+        eventPublisher.publishEvent(new ReviewRequestDto(loginId, repositoryName, prNumber, changedFiles));
+    }
+
+    /**
+     * ai 리뷰 결과 업데이트
+     */
+    @Transactional
+    public void updateAiReview(String repositoryName, String loginId, Integer prNumber, String aiReview, ReviewStatus status) {
+        PullRequest pr = findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId, prNumber);
+        pr.updateAiReview(aiReview);
+        pr.updateStatus(status);
     }
 
     /**
@@ -114,7 +139,7 @@ public class PullRequestService {
      * 기존 PR 업데이트
      */
     private void updateExistingPullRequest(PullRequest existingPr, String action) {
-        existingPr.updateStatus(PullRequest.ReviewStatus.PENDING);
+        existingPr.updateStatus(ReviewStatus.PENDING);
         existingPr.updateAction(action);
         
         pullRequestRepository.save(existingPr);
@@ -132,7 +157,7 @@ public class PullRequestService {
                 .prNumber(prNumber)
                 .action(action)
                 .title(title)
-                .status(PullRequest.ReviewStatus.PENDING)
+                .status(ReviewStatus.PENDING)
                 .build();
 
         pullRequestRepository.save(newPr);
