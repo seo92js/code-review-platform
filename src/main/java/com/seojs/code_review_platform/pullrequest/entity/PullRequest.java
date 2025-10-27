@@ -41,6 +41,9 @@ public class PullRequest {
 
     private LocalDateTime updatedAt;
 
+    @Lob
+    private String aiReview;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -58,6 +61,7 @@ public class PullRequest {
     public enum ReviewStatus {
         PENDING,    // 리뷰 대기 중
         COMPLETED,   // 리뷰 완료
+        FAILED
     }
 
     public void updateStatus(ReviewStatus newStatus) {
@@ -70,6 +74,11 @@ public class PullRequest {
         this.updatedAt = LocalDateTime.now();
     }
 
+    public void updateAiReview(String aiReview) {
+        this.aiReview = aiReview;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     @Builder
     public PullRequest(Integer prNumber, String repositoryName, GithubAccount githubAccount, String title, String action, ReviewStatus status) {
         this.prNumber = prNumber;
@@ -78,5 +87,6 @@ public class PullRequest {
         this.title = title;
         this.action = action;
         this.status = status;
+        this.aiReview = null;
     }
 } 

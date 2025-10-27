@@ -176,6 +176,7 @@ public class GithubService {
     /**
      * 웹훅 등록
      */
+    @Transactional(readOnly = true)
     public void registerWebhook(String accessToken, String owner, String repository) {
         GithubAccount account = findByLoginIdOrThrow(owner);
 

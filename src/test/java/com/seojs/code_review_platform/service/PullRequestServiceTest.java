@@ -1,6 +1,7 @@
 package com.seojs.code_review_platform.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.ApplicationEventPublisher;
 import com.seojs.code_review_platform.github.dto.ChangedFileDto;
 import com.seojs.code_review_platform.github.dto.WebhookPayloadDto;
 import com.seojs.code_review_platform.github.dto.WebhookPayloadDto.PullRequestDto;
@@ -39,6 +40,9 @@ class PullRequestServiceTest {
     private WebhookSecurityService webhookSecurityService;
 
     @Mock
+    private ApplicationEventPublisher eventPublisher;
+
+    @Mock
     private ObjectMapper objectMapper;
 
     private PullRequestService pullRequestService;
@@ -46,7 +50,7 @@ class PullRequestServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        pullRequestService = new PullRequestService(pullRequestRepository, githubService, webhookSecurityService, objectMapper);
+        pullRequestService = new PullRequestService(pullRequestRepository, githubService, webhookSecurityService, objectMapper, eventPublisher);
     }
 
     @Test
