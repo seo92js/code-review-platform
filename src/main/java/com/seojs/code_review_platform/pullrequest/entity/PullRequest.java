@@ -59,9 +59,10 @@ public class PullRequest {
     }
 
     public enum ReviewStatus {
-        PENDING,    // 리뷰 대기 중
-        COMPLETED,   // 리뷰 완료
-        FAILED
+        PENDING,        // 리뷰 대기 중
+        IN_PROGRESS,    // 리뷰 진행 중
+        COMPLETED,      // 리뷰 완료
+        FAILED          // 리뷰 실패
     }
 
     public void updateStatus(ReviewStatus newStatus) {
