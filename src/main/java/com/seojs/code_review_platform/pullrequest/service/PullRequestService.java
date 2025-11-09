@@ -108,6 +108,15 @@ public class PullRequestService {
     }
 
     /**
+     * ai 리뷰 결과 조회
+     */
+    @Transactional(readOnly = true)
+    public String getAiReview(String loginId, String repositoryName, Integer prNumber) {
+        PullRequest pr = findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId, prNumber);
+        return pr.getAiReview();
+    }
+
+    /**
      * PR 관련 액션인지 확인
      */
     private boolean isPrAction(String action) {

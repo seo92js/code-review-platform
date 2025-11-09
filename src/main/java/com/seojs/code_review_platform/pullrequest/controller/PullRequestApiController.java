@@ -1,7 +1,9 @@
 package com.seojs.code_review_platform.pullrequest.controller;
 
-import java.util.List;
-
+import com.seojs.code_review_platform.github.dto.ChangedFileDto;
+import com.seojs.code_review_platform.pullrequest.dto.PullRequestResponseDto;
+import com.seojs.code_review_platform.pullrequest.service.PullRequestService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
@@ -11,11 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.seojs.code_review_platform.github.dto.ChangedFileDto;
-import com.seojs.code_review_platform.pullrequest.dto.PullRequestResponseDto;
-import com.seojs.code_review_platform.pullrequest.service.PullRequestService;
-
-import lombok.RequiredArgsConstructor;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -45,5 +43,11 @@ public class PullRequestApiController {
         String loginId = principal.getAttribute("login");
 
         pullRequestService.review(loginId, repository, prNumber, accessToken);
+    }
+
+    @GetMapping("/api/pull-request/review")
+    public String getPullRequestReview(@AuthenticationPrincipal OAuth2User principal, @RequestParam String repository, @RequestParam Integer prNumber) {
+        String loginId = principal.getAttribute("login");
+        return pullRequestService.getAiReview(loginId, repository, prNumber);
     }
 }

@@ -575,4 +575,34 @@ class PullRequestServiceTest {
 
         return new WebhookPayloadDto(action, pullRequest, repository);
     }
+
+    @Test
+    void getAiReview_성공() {
+        // given
+        String loginId = "test-owner";
+        String repositoryName = "test-repo";
+        Integer prNumber = 1;
+        String expectedReview = "AI review content";
+
+        GithubAccount githubAccount = GithubAccount.builder().loginId(loginId).build();
+        PullRequest pullRequest = PullRequest.builder()
+                .prNumber(prNumber)
+                .repositoryName(repositoryName)
+                .githubAccount(githubAccount)
+                .title("Test PR")
+                .action("opened")
+                .status(PullRequest.ReviewStatus.PENDING)
+                .build();
+        pullRequest.updateAiReview(expectedReview);
+
+        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber))
+                .thenReturn(Optional.of(pullRequest));
+
+        // when
+        String actualReview = pullRequestService.getAiReview(loginId, repositoryName, prNumber);
+
+        // then
+        assertEquals(expectedReview, actualReview);
+        verify(pullRequestRepository).findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber);
+    }
 }
