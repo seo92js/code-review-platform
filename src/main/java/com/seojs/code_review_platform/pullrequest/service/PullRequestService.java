@@ -91,7 +91,7 @@ public class PullRequestService {
 
         List<ChangedFileDto> changedFiles = githubService.getChangedFiles(accessToken, loginId, repositoryName, prNumber);
 
-        pr.updateStatus(ReviewStatus.PENDING);
+        pr.updateStatus(ReviewStatus.IN_PROGRESS);
 
         // LLM 호출은 이벤트 리스너에서 수행
         eventPublisher.publishEvent(new ReviewRequestDto(loginId, repositoryName, prNumber, changedFiles));
