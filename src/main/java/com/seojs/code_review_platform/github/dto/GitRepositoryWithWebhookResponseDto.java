@@ -11,10 +11,12 @@ import lombok.Setter;
 public class GitRepositoryWithWebhookResponseDto {
     private GitRepositoryResponseDto repository;
     private boolean hasWebhook;
+    private boolean existsOpenPullRequest;
 
     @Builder
-    GitRepositoryWithWebhookResponseDto(GitRepositoryResponseDto repository, boolean hasWebhook) {
+    GitRepositoryWithWebhookResponseDto(GitRepositoryResponseDto repository, boolean hasWebhook, boolean existsOpenPullRequest) {
         this.repository = repository;
         this.hasWebhook = hasWebhook;
+        this.existsOpenPullRequest = existsOpenPullRequest;
     }
 }

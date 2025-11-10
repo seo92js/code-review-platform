@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface PullRequestRepository extends JpaRepository<PullRequest, Long> {
+public interface PullRequestRepository extends JpaRepository<PullRequest, Long>, PullRequestRepositoryCustom {
 
     /**
      * 특정 저장소의 특정 PR 번호로 조회
