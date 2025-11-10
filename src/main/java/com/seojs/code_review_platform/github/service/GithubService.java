@@ -10,6 +10,7 @@ import com.seojs.code_review_platform.github.dto.WebhookCreateRequestDto;
 import com.seojs.code_review_platform.github.dto.WebhookResponseDto;
 import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
+import com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -22,6 +23,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -30,6 +35,9 @@ public class GithubService {
     private final RestTemplate restTemplate;
     private final GithubAccountRepository githubAccountRepository;
     private final TokenEncryptionService tokenEncryptionService;
+    private final PullRequestRepository pullRequestRepository;
+
+    private final Executor executor = Executors.newFixedThreadPool(10);
 
     @Value("${github.webhook.url}")
     private String webhookUrl;
@@ -83,20 +91,27 @@ public class GithubService {
     }
 
     /**
-     * 사용자의 모든 저장소와 각 저장소의 webhook 등록 상태를 조회
+     * 사용자의 모든 저장소와 각 저장소의 webhook 등록 상태를 조회 (병렬 처리)
      */
     public List<GitRepositoryWithWebhookResponseDto> getRepositoriesWithWebhookStatus(String accessToken) {
         List<GitRepositoryResponseDto> repositories = getRepositories(accessToken);
 
-        return repositories.stream()
-                .map(repo -> {
+        List<CompletableFuture<GitRepositoryWithWebhookResponseDto>> futures = repositories.stream()
+                .map(repo -> CompletableFuture.supplyAsync(() -> {
                     boolean hasWebhook = isWebhook(accessToken, repo.getOwner(), repo.getName());
+                    boolean existsOpenPr = pullRequestRepository.existsOpenPrByLoginIdAndRepositoryName(repo.getOwner(), repo.getName());
+
                     return GitRepositoryWithWebhookResponseDto.builder()
                             .repository(repo)
                             .hasWebhook(hasWebhook)
+                            .existsOpenPullRequest(existsOpenPr)
                             .build();
-                })
+                }, executor))
                 .toList();
+
+        return futures.stream()
+                .map(CompletableFuture::join)
+                .collect(Collectors.toList());
     }
 
     /**
