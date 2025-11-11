@@ -1,16 +1,14 @@
 package com.seojs.code_review_platform.service;
 
+import com.seojs.code_review_platform.exception.GithubAccountNotFoundEx;
 import com.seojs.code_review_platform.github.dto.GitRepositoryResponseDto;
-import com.seojs.code_review_platform.github.dto.WebhookCreateRequestDto;
 import com.seojs.code_review_platform.github.dto.WebhookResponseDto;
 import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import com.seojs.code_review_platform.github.service.GithubService;
 import com.seojs.code_review_platform.github.service.TokenEncryptionService;
-import com.seojs.code_review_platform.exception.GithubAccountNotFoundEx;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.core.ParameterizedTypeReference;
@@ -41,12 +39,15 @@ class GithubServiceTest {
     @Mock
     private TokenEncryptionService tokenEncryptionService;
 
+    @Mock
+    private com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository pullRequestRepository;
+
     private GithubService githubService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        githubService = new GithubService(restTemplate, githubAccountRepository, tokenEncryptionService);
+        githubService = new GithubService(restTemplate, githubAccountRepository, tokenEncryptionService, pullRequestRepository);
         // 테스트용 webhook URL 설정
         ReflectionTestUtils.setField(githubService, "webhookUrl", "http://test.com/webhook");
     }
@@ -254,4 +255,86 @@ class GithubServiceTest {
         
         assertEquals("No accessToken for loginId: " + loginId, exception.getMessage());
     }
+
+    @Test
+    void getSystemPrompt_성공() {
+        // given
+        String loginId = "test-user";
+        String expectedPrompt = "당신은 시니어 개발자입니다.";
+
+        GithubAccount account = GithubAccount.builder()
+                .loginId(loginId)
+                .accessToken("test-token")
+                .webhookSecret("test-secret")
+                .build();
+        account.updateSystemPrompt(expectedPrompt);
+
+        when(githubAccountRepository.findByLoginId(loginId))
+                .thenReturn(Optional.of(account));
+
+        // when
+        String result = githubService.getSystemPrompt(loginId);
+
+        // then
+        assertEquals(expectedPrompt, result);
+        verify(githubAccountRepository).findByLoginId(loginId);
+    }
+
+    @Test
+    void getSystemPrompt_계정없을시_예외발생() {
+        // given
+        String loginId = "non-existent-user";
+
+        when(githubAccountRepository.findByLoginId(loginId))
+                .thenReturn(Optional.empty());
+
+        // when & then
+        GithubAccountNotFoundEx exception = assertThrows(GithubAccountNotFoundEx.class,
+                () -> githubService.getSystemPrompt(loginId));
+
+        assertEquals("GithubAccount not found for loginId: " + loginId, exception.getMessage());
+    }
+
+    @Test
+    void updateSystemPrompt_성공() {
+        // given
+        String loginId = "test-user";
+        String newPrompt = "당신은 주니어 개발자를 위한 친절한 리뷰어입니다.";
+        Long expectedId = 1L;
+
+        GithubAccount account = GithubAccount.builder()
+                .loginId(loginId)
+                .accessToken("test-token")
+                .webhookSecret("test-secret")
+                .build();
+        ReflectionTestUtils.setField(account, "id", expectedId);
+
+        when(githubAccountRepository.findByLoginId(loginId))
+                .thenReturn(Optional.of(account));
+
+        // when
+        Long result = githubService.updateSystemPrompt(loginId, newPrompt);
+
+        // then
+        assertEquals(expectedId, result);
+        assertEquals(newPrompt, account.getSystemPrompt());
+        verify(githubAccountRepository).findByLoginId(loginId);
+    }
+
+    @Test
+    void updateSystemPrompt_계정없을시_예외발생() {
+        // given
+        String loginId = "non-existent-user";
+        String newPrompt = "새로운 프롬프트";
+
+        when(githubAccountRepository.findByLoginId(loginId))
+                .thenReturn(Optional.empty());
+
+        // when & then
+        GithubAccountNotFoundEx exception = assertThrows(GithubAccountNotFoundEx.class,
+                () -> githubService.updateSystemPrompt(loginId, newPrompt));
+
+        assertEquals("GithubAccount not found for loginId: " + loginId, exception.getMessage());
+    }
 }
+

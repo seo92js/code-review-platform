@@ -132,6 +132,30 @@ public class GithubService {
         return githubAccountRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new GithubAccountNotFoundEx("GithubAccount not found for loginId: " + loginId));
     }
+
+    /**
+     * 시스템 프롬프트 조회
+     * @param loginId
+     * @return
+     */
+    @Transactional(readOnly = true)
+    public String getSystemPrompt(String loginId) {
+        GithubAccount account = findByLoginIdOrThrow(loginId);
+        return account.getSystemPrompt();
+    }
+
+    /**
+     * 시스템 프롬프트 업데이트
+     * @param loginId
+     * @param systemPrompt
+     * @return
+     */
+    @Transactional
+    public Long updateSystemPrompt(String loginId, String systemPrompt) {
+        GithubAccount account = findByLoginIdOrThrow(loginId);
+        account.updateSystemPrompt(systemPrompt);
+        return account.getId();
+    }
     
     /**
      * PR의 변경된 파일 목록 조회

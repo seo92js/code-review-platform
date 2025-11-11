@@ -60,4 +60,17 @@ public class GithubApiController {
 
         githubService.registerWebhook(accessToken, owner, repository);
     }
+
+    @GetMapping("/api/github/prompt")
+    public String getSystemPrompt(@AuthenticationPrincipal OAuth2User principal) {
+        String owner = principal.getAttribute("login");
+        return githubService.getSystemPrompt(owner);
+    }
+
+    @PatchMapping("/api/github/prompt")
+    public Long updateSystemPrompt(@AuthenticationPrincipal OAuth2User principal,
+                                   @RequestParam String prompt) {
+        String owner = principal.getAttribute("login");
+        return githubService.updateSystemPrompt(owner, prompt);
+    }
 }
