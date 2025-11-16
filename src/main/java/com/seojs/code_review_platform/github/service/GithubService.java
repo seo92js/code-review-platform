@@ -1,28 +1,24 @@
 package com.seojs.code_review_platform.github.service;
 
-import com.seojs.code_review_platform.exception.GithubAccountNotFoundEx;
 import com.seojs.code_review_platform.exception.GitHubApiEx;
+import com.seojs.code_review_platform.exception.GithubAccountNotFoundEx;
 import com.seojs.code_review_platform.exception.WebhookRegistrationEx;
-import com.seojs.code_review_platform.github.dto.ChangedFileDto;
-import com.seojs.code_review_platform.github.dto.GitRepositoryResponseDto;
-import com.seojs.code_review_platform.github.dto.GitRepositoryWithWebhookResponseDto;
-import com.seojs.code_review_platform.github.dto.WebhookCreateRequestDto;
-import com.seojs.code_review_platform.github.dto.WebhookResponseDto;
+import com.seojs.code_review_platform.github.dto.*;
 import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -145,6 +141,21 @@ public class GithubService {
     }
 
     /**
+     * 무시 패턴 조회
+     * @param loginId
+     * @return
+     */
+    @Transactional(readOnly = true)
+    public List<String> getIgnorePatterns(String loginId) {
+        GithubAccount account = findByLoginIdOrThrow(loginId);
+        String patterns = account.getIgnorePatterns();
+        if (patterns == null || patterns.isBlank()) {
+            return Collections.emptyList();
+        }
+        return Arrays.asList(patterns.split("\\s*,\\s*"));
+    }
+
+    /**
      * 시스템 프롬프트 업데이트
      * @param loginId
      * @param systemPrompt
@@ -154,6 +165,20 @@ public class GithubService {
     public Long updateSystemPrompt(String loginId, String systemPrompt) {
         GithubAccount account = findByLoginIdOrThrow(loginId);
         account.updateSystemPrompt(systemPrompt);
+        return account.getId();
+    }
+
+    /**
+     * 무시 패턴 업데이트
+     * @param loginId
+     * @param patterns
+     * @return
+     */
+    @Transactional
+    public Long updateIgnorePatterns(String loginId, List<String> patterns) {
+        GithubAccount account = findByLoginIdOrThrow(loginId);
+        String patternsString = patterns == null ? "" : String.join(",", patterns);
+        account.updateIgnorePatterns(patternsString);
         return account.getId();
     }
     

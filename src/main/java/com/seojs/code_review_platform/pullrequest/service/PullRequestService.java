@@ -18,6 +18,10 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.FileSystems;
+import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -91,10 +95,24 @@ public class PullRequestService {
 
         List<ChangedFileDto> changedFiles = githubService.getChangedFiles(accessToken, loginId, repositoryName, prNumber);
 
+        GithubAccount githubAccount = pr.getGithubAccount();
+        List<String> ignorePatterns = githubAccount.getIgnorePatternsAsList();
+        List<ChangedFileDto> filteredFiles = changedFiles;
+
+        if (!ignorePatterns.isEmpty()) {
+            List<PathMatcher> matchers = ignorePatterns.stream()
+                    .map(pattern -> FileSystems.getDefault().getPathMatcher("glob:" + pattern))
+                    .toList();
+
+            filteredFiles = changedFiles.stream()
+                    .filter(file -> matchers.stream().noneMatch(matcher -> matcher.matches(Paths.get(file.getFilename()))))
+                    .toList();
+        }
+
         pr.updateStatus(ReviewStatus.IN_PROGRESS);
 
         // LLM 호출은 이벤트 리스너에서 수행
-        eventPublisher.publishEvent(new ReviewRequestDto(loginId, repositoryName, prNumber, changedFiles));
+        eventPublisher.publishEvent(new ReviewRequestDto(loginId, repositoryName, prNumber, filteredFiles));
     }
 
     /**

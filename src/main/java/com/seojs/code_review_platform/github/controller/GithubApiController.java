@@ -73,4 +73,17 @@ public class GithubApiController {
         String owner = principal.getAttribute("login");
         return githubService.updateSystemPrompt(owner, prompt);
     }
+
+    @GetMapping("/api/github/ignore")
+    public List<String> getIgnorePatterns(@AuthenticationPrincipal OAuth2User principal) {
+        String owner = principal.getAttribute("login");
+        return githubService.getIgnorePatterns(owner);
+    }
+
+    @PatchMapping("/api/github/ignore")
+    public Long updateIgnorePatterns(@AuthenticationPrincipal OAuth2User principal,
+                                     @RequestBody List<String> patterns) {
+        String owner = principal.getAttribute("login");
+        return githubService.updateIgnorePatterns(owner, patterns);
+    }
 }

@@ -3,6 +3,10 @@ package com.seojs.code_review_platform.github.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 @Getter
 @NoArgsConstructor
 @Entity
@@ -23,12 +27,26 @@ public class GithubAccount {
     @Column(nullable = false, length = 2000)
     private String systemPrompt;
 
+    @Column(length = 1000)
+    private String ignorePatterns;
+
     public void updateAccessToken(String accessToken) {
         this.accessToken = accessToken;
     }
 
     public void updateSystemPrompt(String systemPrompt) {
         this.systemPrompt = systemPrompt;
+    }
+
+    public void updateIgnorePatterns(String ignorePatterns) {
+        this.ignorePatterns = ignorePatterns;
+    }
+
+    public List<String> getIgnorePatternsAsList() {
+        if (this.ignorePatterns == null || this.ignorePatterns.isBlank()) {
+            return Collections.emptyList();
+        }
+        return Arrays.asList(this.ignorePatterns.split("\\s*,\\s*"));
     }
 
     @Builder
@@ -49,5 +67,6 @@ public class GithubAccount {
                 5.  **질문:** 명확하지 않거나 의도가 불분명한 부분에 대해 질문합니다.
                 6.  **결론:** 리뷰 내용을 종합하고 최종 의견을 제시합니다.
                 """;
+        this.ignorePatterns = null;
     }
 }
