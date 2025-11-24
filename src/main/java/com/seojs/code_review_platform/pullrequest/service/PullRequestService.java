@@ -21,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.file.FileSystems;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -41,7 +40,7 @@ public class PullRequestService {
         webhookSecurityService.validateWebhookSignature(payload, signature);
         processWebhookPayload(payload);
     }
-    
+
     /**
      * 웹훅 페이로드 처리
      */
@@ -49,7 +48,7 @@ public class PullRequestService {
         try {
             WebhookPayloadDto webhookPayload = objectMapper.readValue(payload, WebhookPayloadDto.class);
             String action = webhookPayload.getAction();
-            
+
             // PR 관련 액션만 처리
             if (isPrAction(action)) {
                 savePullRequest(webhookPayload);
@@ -64,16 +63,18 @@ public class PullRequestService {
      */
     @Transactional(readOnly = true)
     public List<PullRequestResponseDto> getPullRequestList(String loginId, String repositoryName) {
-        return pullRequestRepository.findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId, repositoryName).stream()
-        .map(PullRequestResponseDto::fromEntity)
-        .toList();
+        return pullRequestRepository
+                .findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId, repositoryName).stream()
+                .map(PullRequestResponseDto::fromEntity)
+                .toList();
     }
 
     /**
      * PR 변경된 파일 목록 조회
      */
     @Transactional(readOnly = true)
-    public List<ChangedFileDto> getPullRequestWithChanges(String loginId, String repositoryName, Integer prNumber, String accessToken) {
+    public List<ChangedFileDto> getPullRequestWithChanges(String loginId, String repositoryName, Integer prNumber,
+            String accessToken) {
         findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId, prNumber);
         return githubService.getChangedFiles(accessToken, loginId, repositoryName, prNumber);
     }
@@ -81,9 +82,12 @@ public class PullRequestService {
     /**
      * 특정 저장소의 특정 PR 번호로 조회 - 존재하지 않으면 예외 발생
      */
-    private PullRequest findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(String repositoryName, String loginId, Integer prNumber) {
-        return pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber)
-            .orElseThrow(() -> new PullRequestNotFoundEx("Pull request not found for repositoryName: " + repositoryName + ", loginId: " + loginId + ", prNumber: " + prNumber));
+    private PullRequest findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(String repositoryName,
+            String loginId, Integer prNumber) {
+        return pullRequestRepository
+                .findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber)
+                .orElseThrow(() -> new PullRequestNotFoundEx("Pull request not found for repositoryName: "
+                        + repositoryName + ", loginId: " + loginId + ", prNumber: " + prNumber));
     }
 
     /**
@@ -91,9 +95,11 @@ public class PullRequestService {
      */
     @Transactional
     public void review(String loginId, String repositoryName, Integer prNumber, String accessToken) {
-        PullRequest pr = findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId, prNumber);
+        PullRequest pr = findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId,
+                prNumber);
 
-        List<ChangedFileDto> changedFiles = githubService.getChangedFiles(accessToken, loginId, repositoryName, prNumber);
+        List<ChangedFileDto> changedFiles = githubService.getChangedFiles(accessToken, loginId, repositoryName,
+                prNumber);
 
         GithubAccount githubAccount = pr.getGithubAccount();
         List<String> ignorePatterns = githubAccount.getIgnorePatternsAsList();
@@ -101,11 +107,13 @@ public class PullRequestService {
 
         if (!ignorePatterns.isEmpty()) {
             List<PathMatcher> matchers = ignorePatterns.stream()
+                    .map(this::convertUserPatternToGlob)
                     .map(pattern -> FileSystems.getDefault().getPathMatcher("glob:" + pattern))
                     .toList();
 
             filteredFiles = changedFiles.stream()
-                    .filter(file -> matchers.stream().noneMatch(matcher -> matcher.matches(Paths.get(file.getFilename()))))
+                    .filter(file -> matchers.stream()
+                            .noneMatch(matcher -> matcher.matches(Paths.get(file.getFilename()))))
                     .toList();
         }
 
@@ -119,8 +127,10 @@ public class PullRequestService {
      * ai 리뷰 결과 업데이트
      */
     @Transactional
-    public void updateAiReview(String repositoryName, String loginId, Integer prNumber, String aiReview, ReviewStatus status) {
-        PullRequest pr = findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId, prNumber);
+    public void updateAiReview(String repositoryName, String loginId, Integer prNumber, String aiReview,
+            ReviewStatus status) {
+        PullRequest pr = findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId,
+                prNumber);
         pr.updateAiReview(aiReview);
         pr.updateStatus(status);
     }
@@ -130,7 +140,8 @@ public class PullRequestService {
      */
     @Transactional(readOnly = true)
     public String getAiReview(String loginId, String repositoryName, Integer prNumber) {
-        PullRequest pr = findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId, prNumber);
+        PullRequest pr = findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId,
+                prNumber);
         return pr.getAiReview();
     }
 
@@ -168,8 +179,42 @@ public class PullRequestService {
     private void updateExistingPullRequest(PullRequest existingPr, String action) {
         existingPr.updateStatus(ReviewStatus.PENDING);
         existingPr.updateAction(action);
-        
+
         pullRequestRepository.save(existingPr);
+    }
+
+    /**
+     * 사용자 입력 패턴을 Glob 패턴으로 변환 (gitignore 스타일 지원)
+     */
+    private String convertUserPatternToGlob(String pattern) {
+        pattern = pattern.trim();
+        boolean isDirectory = pattern.endsWith("/");
+        if (isDirectory) {
+            pattern = pattern.substring(0, pattern.length() - 1);
+        }
+
+        boolean isRooted = pattern.startsWith("/");
+        if (isRooted) {
+            pattern = pattern.substring(1);
+        }
+
+        boolean hasSlash = pattern.contains("/");
+
+        StringBuilder glob = new StringBuilder();
+
+        if (!isRooted && !hasSlash) {
+            glob.append("{**/,}");
+        }
+
+        glob.append(pattern);
+
+        if (isDirectory) {
+            glob.append("/**");
+        } else {
+            glob.append("{,/**}");
+        }
+
+        return glob.toString();
     }
 
     /**
@@ -189,4 +234,4 @@ public class PullRequestService {
 
         pullRequestRepository.save(newPr);
     }
-} 
+}
