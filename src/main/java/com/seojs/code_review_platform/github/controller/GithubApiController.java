@@ -1,6 +1,7 @@
 package com.seojs.code_review_platform.github.controller;
 
 import com.seojs.code_review_platform.github.dto.GitRepositoryWithWebhookResponseDto;
+import com.seojs.code_review_platform.github.dto.OpenAiKeyDto;
 import com.seojs.code_review_platform.github.service.GithubService;
 import com.seojs.code_review_platform.pullrequest.service.PullRequestService;
 import lombok.RequiredArgsConstructor;
@@ -85,5 +86,18 @@ public class GithubApiController {
                                      @RequestBody List<String> patterns) {
         String owner = principal.getAttribute("login");
         return githubService.updateIgnorePatterns(owner, patterns);
+    }
+
+    @PatchMapping("/api/github/openai")
+    public Long updateOpenAiKey(@AuthenticationPrincipal OAuth2User principal, @RequestBody OpenAiKeyDto dto) {
+        String owner = principal.getAttribute("login");
+        String key = dto.getKey();
+        return githubService.updateOpenAiKey(owner, key);
+    }
+
+    @GetMapping("/api/github/openai")
+    public String getOpenAiKey(@AuthenticationPrincipal OAuth2User principal) {
+        String owner = principal.getAttribute("login");
+        return githubService.getOpenAiKey(owner);
     }
 }
