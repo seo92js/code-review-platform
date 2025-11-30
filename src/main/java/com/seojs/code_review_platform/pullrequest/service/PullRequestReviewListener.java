@@ -32,10 +32,11 @@ public class PullRequestReviewListener {
 
         GithubAccount githubAccount = githubService.findByLoginIdOrThrow(loginId);
         String systemPrompt = githubAccount.getSystemPrompt();
+        String openApiKey = githubAccount.getOpenAiKey();
 
         try {
             String userPrompt = objectMapper.writeValueAsString(changedFiles);
-            String review = aiService.callAiChat(systemPrompt, userPrompt);
+            String review = aiService.callAiChat(openApiKey, systemPrompt, userPrompt);
             pullRequestService.updateAiReview(repositoryName, loginId, prNumber, review, ReviewStatus.COMPLETED);
         } catch (Exception e) {
             pullRequestService.updateAiReview(repositoryName, loginId, prNumber, "AI review failed", ReviewStatus.FAILED);

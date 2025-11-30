@@ -30,6 +30,9 @@ public class GithubAccount {
     @Column(length = 1000)
     private String ignorePatterns;
 
+    @Column
+    private String openAiKey;
+
     public void updateAccessToken(String accessToken) {
         this.accessToken = accessToken;
     }
@@ -41,6 +44,8 @@ public class GithubAccount {
     public void updateIgnorePatterns(String ignorePatterns) {
         this.ignorePatterns = ignorePatterns;
     }
+
+    public void updateOpenAiKey(String openAiKey) { this.openAiKey = openAiKey; }
 
     public List<String> getIgnorePatternsAsList() {
         if (this.ignorePatterns == null || this.ignorePatterns.isBlank()) {
@@ -68,5 +73,6 @@ public class GithubAccount {
                 6.  **결론:** 리뷰 내용을 종합하고 최종 의견을 제시합니다.
                 """;
         this.ignorePatterns = null;
+        this.openAiKey = null;
     }
 }

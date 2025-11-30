@@ -131,8 +131,6 @@ public class GithubService {
 
     /**
      * 시스템 프롬프트 조회
-     * @param loginId
-     * @return
      */
     @Transactional(readOnly = true)
     public String getSystemPrompt(String loginId) {
@@ -142,8 +140,6 @@ public class GithubService {
 
     /**
      * 무시 패턴 조회
-     * @param loginId
-     * @return
      */
     @Transactional(readOnly = true)
     public List<String> getIgnorePatterns(String loginId) {
@@ -156,10 +152,16 @@ public class GithubService {
     }
 
     /**
+     * openai api key 조회
+     */
+    @Transactional(readOnly = true)
+    public String getOpenAiKey(String loginId) {
+        GithubAccount account = findByLoginIdOrThrow(loginId);
+        return account.getOpenAiKey();
+    }
+
+    /**
      * 시스템 프롬프트 업데이트
-     * @param loginId
-     * @param systemPrompt
-     * @return
      */
     @Transactional
     public Long updateSystemPrompt(String loginId, String systemPrompt) {
@@ -170,15 +172,22 @@ public class GithubService {
 
     /**
      * 무시 패턴 업데이트
-     * @param loginId
-     * @param patterns
-     * @return
      */
     @Transactional
     public Long updateIgnorePatterns(String loginId, List<String> patterns) {
         GithubAccount account = findByLoginIdOrThrow(loginId);
         String patternsString = patterns == null ? "" : String.join(",", patterns);
         account.updateIgnorePatterns(patternsString);
+        return account.getId();
+    }
+
+    /**
+     * openai api key 업데이트
+     */
+    @Transactional
+    public Long updateOpenAiKey(String loginId, String openAiKey) {
+        GithubAccount account = findByLoginIdOrThrow(loginId);
+        account.updateOpenAiKey(openAiKey);
         return account.getId();
     }
     
