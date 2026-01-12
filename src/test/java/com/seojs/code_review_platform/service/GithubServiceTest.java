@@ -7,6 +7,8 @@ import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import com.seojs.code_review_platform.github.service.GithubService;
 import com.seojs.code_review_platform.github.service.TokenEncryptionService;
+import com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -20,6 +22,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
+import java.util.concurrent.Executor;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,14 +43,17 @@ class GithubServiceTest {
     private TokenEncryptionService tokenEncryptionService;
 
     @Mock
-    private com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository pullRequestRepository;
+    private PullRequestRepository pullRequestRepository;
+
+    @Mock
+    private Executor githubApiExecutor;
 
     private GithubService githubService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        githubService = new GithubService(restTemplate, githubAccountRepository, tokenEncryptionService, pullRequestRepository);
+        githubService = new GithubService(restTemplate, githubAccountRepository, tokenEncryptionService, pullRequestRepository, githubApiExecutor);
         // 테스트용 webhook URL 설정
         ReflectionTestUtils.setField(githubService, "webhookUrl", "http://test.com/webhook");
     }
