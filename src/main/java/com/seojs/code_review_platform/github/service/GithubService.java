@@ -8,6 +8,7 @@ import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -21,7 +22,6 @@ import org.springframework.web.client.RestTemplate;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -32,8 +32,8 @@ public class GithubService {
     private final GithubAccountRepository githubAccountRepository;
     private final TokenEncryptionService tokenEncryptionService;
     private final PullRequestRepository pullRequestRepository;
-
-    private final Executor executor = Executors.newFixedThreadPool(10);
+    @Qualifier("githubApiExecutor")
+    private final Executor githubApiExecutor;
 
     @Value("${github.webhook.url}")
     private String webhookUrl;
@@ -102,7 +102,7 @@ public class GithubService {
                             .hasWebhook(hasWebhook)
                             .existsOpenPullRequest(existsOpenPr)
                             .build();
-                }, executor))
+                }, githubApiExecutor))
                 .toList();
 
         return futures.stream()
@@ -249,7 +249,6 @@ public class GithubService {
     /**
      * 웹훅 등록
      */
-    @Transactional(readOnly = true)
     public void registerWebhook(String accessToken, String owner, String repository) {
         GithubAccount account = findByLoginIdOrThrow(owner);
 

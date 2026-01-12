@@ -23,5 +23,15 @@ public class AsyncConfig {
 
         return executor;
     }
-}
 
+    @Bean(name = "githubApiExecutor")
+    public Executor githubApiExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(10);
+        executor.setMaxPoolSize(20);
+        executor.setQueueCapacity(50);
+        executor.setThreadNamePrefix("github-api-");
+        executor.initialize();
+        return executor;
+    }
+}
