@@ -74,7 +74,7 @@ public class GitHubTokenValidationFilter extends OncePerRequestFilter {
             
             return authorizedClient != null && authorizedClient.getAccessToken() != null;
         } catch (Exception e) {
-            log.error("GitHub 토큰 유효성 검증 실패", e);
+            log.error("GitHub token validation failed", e);
             return false;
         }
     }

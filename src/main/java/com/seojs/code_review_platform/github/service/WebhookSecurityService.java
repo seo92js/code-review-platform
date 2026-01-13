@@ -40,7 +40,7 @@ public class WebhookSecurityService {
             isValidWebhookSignature(payload, signature, account.getWebhookSecret());
             
         } catch (Exception e) {
-            log.error("웹훅 시그니처 검증 실패: {}", e.getMessage());
+            log.error("Webhook signature validation failed: {}", e.getMessage());
             throw new SecurityException("Webhook signature validation failed: " + e.getMessage());
         }
     }
