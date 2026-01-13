@@ -94,7 +94,7 @@ public class PullRequestService {
      * ai 리뷰 시작
      */
     @Transactional
-    public void review(String loginId, String repositoryName, Integer prNumber, String accessToken) {
+    public void review(String loginId, String repositoryName, Integer prNumber, String accessToken, String model) {
         PullRequest pr = findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId,
                 prNumber);
 
@@ -120,7 +120,7 @@ public class PullRequestService {
         pr.updateStatus(ReviewStatus.IN_PROGRESS);
 
         // LLM 호출은 이벤트 리스너에서 수행
-        eventPublisher.publishEvent(new ReviewRequestDto(loginId, repositoryName, prNumber, filteredFiles));
+        eventPublisher.publishEvent(new ReviewRequestDto(loginId, repositoryName, prNumber, filteredFiles, model));
     }
 
     /**

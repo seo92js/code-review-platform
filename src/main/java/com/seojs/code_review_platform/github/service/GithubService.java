@@ -165,6 +165,18 @@ public class GithubService {
     }
 
     /**
+     * 마스킹된 OpenAI Key 반환 (API 응답용)
+     */
+    @Transactional(readOnly = true)
+    public String getMaskedOpenAiKey(String loginId) {
+        String decryptedKey = getOpenAiKey(loginId);
+        if (decryptedKey == null || decryptedKey.length() < 10) {
+            return null;
+        }
+        return decryptedKey.substring(0, 10) + "...****";
+    }
+
+    /**
      * 시스템 프롬프트 업데이트
      */
     @Transactional
@@ -206,11 +218,11 @@ public class GithubService {
     public List<ChangedFileDto> getChangedFiles(String accessToken, String owner, String repo, int prNumber) {
         try {
             String url = String.format("https://api.github.com/repos/%s/%s/pulls/%d/files", owner, repo, prNumber);
-            
+
             HttpHeaders headers = createAuthHeaders(accessToken);
             headers.set("Accept", "application/vnd.github.v3+json");
             HttpEntity<String> entity = new HttpEntity<>(headers);
-            
+
             ResponseEntity<List<ChangedFileDto>> response = restTemplate.exchange(
                 url,
                 HttpMethod.GET,
@@ -220,7 +232,7 @@ public class GithubService {
             
             List<ChangedFileDto> changedFiles = response.getBody();
             return changedFiles != null ? changedFiles : Collections.emptyList();
-            
+
         } catch (Exception e) {
             throw new GitHubApiEx("Failed to get changed files", e);
         }
@@ -254,7 +266,7 @@ public class GithubService {
                 .active(true)
                 .build();
     }
-    
+
     /**
      * 웹훅 등록
      */
@@ -262,11 +274,11 @@ public class GithubService {
         GithubAccount account = findByLoginIdOrThrow(owner);
 
         String url = String.format("https://api.github.com/repos/%s/%s/hooks", owner, repository);
-        
+
         WebhookCreateRequestDto request = createWebhookRequest(account.getWebhookSecret());
         HttpHeaders headers = createAuthHeaders(accessToken);
         HttpEntity<WebhookCreateRequestDto> entity = new HttpEntity<>(request, headers);
-        
+
         try {
             ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
             if (!response.getStatusCode().is2xxSuccessful()) {

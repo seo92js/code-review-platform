@@ -11,14 +11,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class AiService {
 
-    public String callAiChat(String apiKey, String systemPrompt, String userPrompt) {
+    public String callAiChat(String apiKey, String systemPrompt, String userPrompt, String model, Double temperature) {
+        String actualModel = (model != null) ? model : "gpt-4o-mini";
+        double actualTemp = (temperature != null) ? temperature : 0.7;
+
         OpenAiApi userApi = OpenAiApi.builder()
                 .apiKey(apiKey)
                 .build();
 
         OpenAiChatOptions options = OpenAiChatOptions.builder()
-                .model("gpt-4o-mini") // 임시
-                .temperature(0.7) // 임시
+                .model(actualModel)
+                .temperature(actualTemp)
                 .build();
 
         OpenAiChatModel customModel = OpenAiChatModel.builder()

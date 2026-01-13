@@ -13,13 +13,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
 @RequiredArgsConstructor
 @RestController
 public class GithubApiController {
     private final GithubService githubService;
     private final OAuth2AuthorizedClientService authorizedClientService;
-    private final PullRequestService pullRequestWebhookService;
+    private final PullRequestService pullRequestService;
 
     @GetMapping("/api/github/status")
     public boolean getLoginStatus(@AuthenticationPrincipal OAuth2User principal) {
@@ -44,17 +43,16 @@ public class GithubApiController {
     }
 
     @PostMapping("/api/github/webhook/")
-    public void handleWebhook(@RequestBody String payload, 
-                            @RequestHeader("X-Github-Event") String event, 
-                            @RequestHeader(value = "X-Hub-Signature-256", required = false) String signature) {
+    public void handleWebhook(@RequestBody String payload,
+            @RequestHeader("X-Github-Event") String event,
+            @RequestHeader(value = "X-Hub-Signature-256", required = false) String signature) {
         if (event.equals("pull_request")) {
-            pullRequestWebhookService.processAndSaveWebhook(payload, signature);
+            pullRequestService.processAndSaveWebhook(payload, signature);
         }
     }
 
     @PostMapping("/api/github/register")
-    public void registerWebhook(@AuthenticationPrincipal OAuth2User principal,
-                               @RequestParam String repository) {
+    public void registerWebhook(@AuthenticationPrincipal OAuth2User principal, @RequestParam String repository) {
         OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github", principal.getName());
         String accessToken = authorizedClient.getAccessToken().getTokenValue();
         String owner = principal.getAttribute("login");
@@ -69,8 +67,7 @@ public class GithubApiController {
     }
 
     @PatchMapping("/api/github/prompt")
-    public Long updateSystemPrompt(@AuthenticationPrincipal OAuth2User principal,
-                                   @RequestParam String prompt) {
+    public Long updateSystemPrompt(@AuthenticationPrincipal OAuth2User principal, @RequestParam String prompt) {
         String owner = principal.getAttribute("login");
         return githubService.updateSystemPrompt(owner, prompt);
     }
@@ -82,8 +79,7 @@ public class GithubApiController {
     }
 
     @PatchMapping("/api/github/ignore")
-    public Long updateIgnorePatterns(@AuthenticationPrincipal OAuth2User principal,
-                                     @RequestBody List<String> patterns) {
+    public Long updateIgnorePatterns(@AuthenticationPrincipal OAuth2User principal, @RequestBody List<String> patterns) {
         String owner = principal.getAttribute("login");
         return githubService.updateIgnorePatterns(owner, patterns);
     }
@@ -98,6 +94,6 @@ public class GithubApiController {
     @GetMapping("/api/github/openai")
     public String getOpenAiKey(@AuthenticationPrincipal OAuth2User principal) {
         String owner = principal.getAttribute("login");
-        return githubService.getOpenAiKey(owner);
+        return githubService.getMaskedOpenAiKey(owner);
     }
 }
