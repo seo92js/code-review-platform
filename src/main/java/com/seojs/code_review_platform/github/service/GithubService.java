@@ -157,7 +157,11 @@ public class GithubService {
     @Transactional(readOnly = true)
     public String getOpenAiKey(String loginId) {
         GithubAccount account = findByLoginIdOrThrow(loginId);
-        return account.getOpenAiKey();
+        String encryptedKey = account.getOpenAiKey();
+        if (encryptedKey == null || encryptedKey.isBlank()) {
+            return null;
+        }
+        return tokenEncryptionService.decryptToken(encryptedKey);
     }
 
     /**
@@ -187,10 +191,15 @@ public class GithubService {
     @Transactional
     public Long updateOpenAiKey(String loginId, String openAiKey) {
         GithubAccount account = findByLoginIdOrThrow(loginId);
-        account.updateOpenAiKey(openAiKey);
+        if (openAiKey == null || openAiKey.isBlank()) {
+            account.updateOpenAiKey(null);
+        } else {
+            String encryptedKey = tokenEncryptionService.encryptToken(openAiKey);
+            account.updateOpenAiKey(encryptedKey);
+        }
         return account.getId();
     }
-    
+
     /**
      * PR의 변경된 파일 목록 조회
      */
