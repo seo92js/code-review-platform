@@ -45,15 +45,15 @@ class GithubServiceTest {
     @Mock
     private PullRequestRepository pullRequestRepository;
 
-    @Mock
-    private Executor githubApiExecutor;
+    private Executor githubApiExecutor = Runnable::run;
 
     private GithubService githubService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        githubService = new GithubService(restTemplate, githubAccountRepository, tokenEncryptionService, pullRequestRepository, githubApiExecutor);
+        githubService = new GithubService(restTemplate, githubAccountRepository, tokenEncryptionService,
+                        pullRequestRepository, githubApiExecutor);
         // 테스트용 webhook URL 설정
         ReflectionTestUtils.setField(githubService, "webhookUrl", "http://test.com/webhook");
     }
@@ -205,8 +205,7 @@ class GithubServiceTest {
         when(restTemplate.postForEntity(
                 eq(String.format("https://api.github.com/repos/%s/%s/hooks", owner, repo)),
                 any(HttpEntity.class),
-                eq(String.class)
-        )).thenReturn(response);
+                eq(String.class))).thenReturn(response);
 
         // when
         githubService.registerWebhook(accessToken, owner, repo);
@@ -216,8 +215,7 @@ class GithubServiceTest {
         verify(restTemplate).postForEntity(
                 eq(String.format("https://api.github.com/repos/%s/%s/hooks", owner, repo)),
                 any(HttpEntity.class),
-                eq(String.class)
-        );
+                eq(String.class));
 
         // 웹훅 등록이 성공적으로 호출되었는지 확인
         verify(githubAccountRepository).findByLoginId(owner);
@@ -229,7 +227,7 @@ class GithubServiceTest {
         String loginId = "test-owner";
         String encryptedToken = "encrypted-token";
         String decryptedToken = "test-access-token";
-        
+
         GithubAccount account = GithubAccount.builder()
                 .loginId(loginId)
                 .accessToken(encryptedToken)
@@ -256,9 +254,9 @@ class GithubServiceTest {
                 .thenReturn(Optional.empty());
 
         // when & then
-        GithubAccountNotFoundEx exception = assertThrows(GithubAccountNotFoundEx.class, 
+        GithubAccountNotFoundEx exception = assertThrows(GithubAccountNotFoundEx.class,
                 () -> githubService.findAccessTokenByLoginId(loginId));
-        
+
         assertEquals("No accessToken for loginId: " + loginId, exception.getMessage());
     }
 
@@ -342,5 +340,63 @@ class GithubServiceTest {
 
         assertEquals("GithubAccount not found for loginId: " + loginId, exception.getMessage());
     }
-}
 
+    @Test
+    void getRepositoriesWithWebhookStatus_정렬검증() {
+        // given
+        String accessToken = "test-token";
+
+        // Repo1: Open PR X, Old (2024-01-01)
+        GitRepositoryResponseDto repo1 = new GitRepositoryResponseDto();
+        ReflectionTestUtils.setField(repo1, "name", "repo1");
+        ReflectionTestUtils.setField(repo1, "owner", "owner");
+        ReflectionTestUtils.setField(repo1, "updatedAt", "2024-01-01T00:00:00Z");
+
+        // Repo2: Open PR O, Middle (2024-01-02)
+        GitRepositoryResponseDto repo2 = new GitRepositoryResponseDto();
+        ReflectionTestUtils.setField(repo2, "name", "repo2");
+        ReflectionTestUtils.setField(repo2, "owner", "owner");
+        ReflectionTestUtils.setField(repo2, "updatedAt", "2024-01-02T00:00:00Z");
+
+        // Repo3: Open PR O, New (2024-01-03)
+        GitRepositoryResponseDto repo3 = new GitRepositoryResponseDto();
+        ReflectionTestUtils.setField(repo3, "name", "repo3");
+        ReflectionTestUtils.setField(repo3, "owner", "owner");
+        ReflectionTestUtils.setField(repo3, "updatedAt", "2024-01-03T00:00:00Z");
+
+        List<GitRepositoryResponseDto> repos = Arrays.asList(repo1, repo2, repo3);
+
+        // Mock getRepositories
+        when(restTemplate.exchange(
+                eq("https://api.github.com/user/repos"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                any(ParameterizedTypeReference.class)))
+                .thenReturn(new ResponseEntity<>(repos, HttpStatus.OK));
+
+        // Mock Webhook (모두 false)
+        when(restTemplate.exchange(
+                org.mockito.ArgumentMatchers.contains("hooks"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                any(ParameterizedTypeReference.class)))
+                .thenReturn(new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK));
+
+        // Mock Open PR
+        // repo2, repo3 has Open PR
+        when(pullRequestRepository.existsOpenPrByLoginIdAndRepositoryName("owner", "repo1")).thenReturn(false);
+        when(pullRequestRepository.existsOpenPrByLoginIdAndRepositoryName("owner", "repo2")).thenReturn(true);
+        when(pullRequestRepository.existsOpenPrByLoginIdAndRepositoryName("owner", "repo3")).thenReturn(true);
+
+        // when
+        var result = githubService.getRepositoriesWithWebhookStatus(accessToken);
+
+        // then
+        assertEquals(3, result.size());
+
+        // 1순위: Open PR O (repo3, repo2) -> 2순위: 최신순 (repo3 -> repo2)
+        assertEquals("repo3", result.get(0).getRepository().getName()); // Open PR O, 2024-01-03
+        assertEquals("repo2", result.get(1).getRepository().getName()); // Open PR O, 2024-01-02
+        assertEquals("repo1", result.get(2).getRepository().getName()); // Open PR X
+    }
+}

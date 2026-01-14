@@ -51,8 +51,8 @@ public class GithubService {
                 url,
                 HttpMethod.GET,
                 entity,
-                new ParameterizedTypeReference<>() {}
-        );
+                new ParameterizedTypeReference<>() {
+                });
 
         return response.getBody();
     }
@@ -70,8 +70,8 @@ public class GithubService {
                 url,
                 HttpMethod.GET,
                 entity,
-                new ParameterizedTypeReference<>() {}
-        );
+                new ParameterizedTypeReference<>() {
+                });
 
         List<WebhookResponseDto> webhooks = response.getBody();
 
@@ -95,7 +95,8 @@ public class GithubService {
         List<CompletableFuture<GitRepositoryWithWebhookResponseDto>> futures = repositories.stream()
                 .map(repo -> CompletableFuture.supplyAsync(() -> {
                     boolean hasWebhook = isWebhook(accessToken, repo.getOwner(), repo.getName());
-                    boolean existsOpenPr = pullRequestRepository.existsOpenPrByLoginIdAndRepositoryName(repo.getOwner(), repo.getName());
+                    boolean existsOpenPr = pullRequestRepository.existsOpenPrByLoginIdAndRepositoryName(repo.getOwner(),
+                            repo.getName());
 
                     return GitRepositoryWithWebhookResponseDto.builder()
                             .repository(repo)
@@ -107,6 +108,24 @@ public class GithubService {
 
         return futures.stream()
                 .map(CompletableFuture::join)
+                .sorted((r1, r2) -> {
+                    // Open PR이 있는 경우 최우선
+                    if (r1.isExistsOpenPullRequest() != r2.isExistsOpenPullRequest()) {
+                        return r1.isExistsOpenPullRequest() ? -1 : 1;
+                    }
+                    // 최근 수정일 순 (내림차순)
+                    String t1 = r1.getRepository().getUpdatedAt();
+                    String t2 = r2.getRepository().getUpdatedAt();
+
+                    if (t1 == null && t2 == null)
+                        return 0;
+                    if (t1 == null)
+                        return 1;
+                    if (t2 == null)
+                        return -1;
+
+                    return t2.compareTo(t1);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -224,12 +243,12 @@ public class GithubService {
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
             ResponseEntity<List<ChangedFileDto>> response = restTemplate.exchange(
-                url,
-                HttpMethod.GET,
-                entity,
-                new ParameterizedTypeReference<>() {}
-            );
-            
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    new ParameterizedTypeReference<>() {
+                    });
+
             List<ChangedFileDto> changedFiles = response.getBody();
             return changedFiles != null ? changedFiles : Collections.emptyList();
 
