@@ -20,7 +20,7 @@ import java.util.List;
 public class PullRequestApiController {
     private final PullRequestService pullRequestService;
     private final OAuth2AuthorizedClientService authorizedClientService;
-    
+
     @GetMapping("/api/pull-requests")
     public List<PullRequestResponseDto> getPullRequestList(@AuthenticationPrincipal OAuth2User principal, @RequestParam String repositoryName) {
         String loginId = principal.getAttribute("login");
@@ -37,12 +37,12 @@ public class PullRequestApiController {
     }
 
     @PostMapping("/api/pull-request/review")
-    public void reviewPullRequest(@AuthenticationPrincipal OAuth2User principal, @RequestParam String repository, @RequestParam Integer prNumber) {
+    public void reviewPullRequest(@AuthenticationPrincipal OAuth2User principal, @RequestParam String repository, @RequestParam Integer prNumber, @RequestParam(required = false) String model) {
         OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github", principal.getName());
         String accessToken = authorizedClient.getAccessToken().getTokenValue();
         String loginId = principal.getAttribute("login");
 
-        pullRequestService.review(loginId, repository, prNumber, accessToken);
+        pullRequestService.review(loginId, repository, prNumber, accessToken, model);
     }
 
     @GetMapping("/api/pull-request/review")

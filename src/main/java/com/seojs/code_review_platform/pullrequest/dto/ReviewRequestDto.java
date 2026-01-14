@@ -15,4 +15,5 @@ public class ReviewRequestDto {
     private String repositoryName;
     private Integer prNumber;
     private List<ChangedFileDto> changedFiles;
+    private String model;
 }

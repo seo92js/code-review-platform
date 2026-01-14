@@ -22,6 +22,9 @@ public class GitRepositoryResponseDto {
     @JsonProperty("html_url")
     private String htmlUrl;
 
+    @JsonProperty("updated_at")
+    private String updatedAt;
+
     private String owner;
 
     @JsonProperty("private")
@@ -34,5 +37,3 @@ public class GitRepositoryResponseDto {
         this.owner = owner.get("login").toString();
     }
 }
-
-

@@ -32,6 +32,7 @@ public class PullRequestReviewListener {
         String loginId = dto.getLoginId();
         String repositoryName = dto.getRepositoryName();
         Integer prNumber = dto.getPrNumber();
+        String model = dto.getModel();
 
         GithubAccount githubAccount = githubService.findByLoginIdOrThrow(loginId);
         String systemPrompt = githubAccount.getSystemPrompt();
@@ -39,7 +40,7 @@ public class PullRequestReviewListener {
 
         try {
             String userPrompt = objectMapper.writeValueAsString(changedFiles);
-            String review = aiService.callAiChat(openApiKey, systemPrompt, userPrompt);
+            String review = aiService.callAiChat(openApiKey, systemPrompt, userPrompt, model, null);
             pullRequestService.updateAiReview(repositoryName, loginId, prNumber, review, ReviewStatus.COMPLETED);
         } catch (JsonProcessingException e) {
             log.error("json processing failed - loginId: {}, repo: {}, pr: {}", loginId, repositoryName, prNumber, e);
