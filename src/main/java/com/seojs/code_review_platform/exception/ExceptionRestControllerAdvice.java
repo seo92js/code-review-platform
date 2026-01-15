@@ -91,7 +91,7 @@ public class ExceptionRestControllerAdvice {
         return new ErrorDto(errorCode, message);
     }
 
-    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(OpenAiKeyNotSetEx.class)
     public ErrorDto openAiKeyNotSet(OpenAiKeyNotSetEx e) {
         String errorCode = "OPEN_AI_KEY_NOT_SET";
