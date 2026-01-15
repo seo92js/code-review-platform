@@ -1,5 +1,6 @@
 package com.seojs.code_review_platform.pullrequest.service;
 
+import com.seojs.code_review_platform.exception.OpenAiKeyNotSetEx;
 import com.seojs.code_review_platform.exception.PullRequestNotFoundEx;
 import com.seojs.code_review_platform.exception.WebhookProcessingEx;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -102,6 +103,11 @@ public class PullRequestService {
                 prNumber);
 
         GithubAccount githubAccount = pr.getGithubAccount();
+
+        if (githubAccount.getOpenAiKey() == null || githubAccount.getOpenAiKey().isEmpty()) {
+            throw new OpenAiKeyNotSetEx("OpenAI API key is not set. Please set it in the settings.");
+        }
+
         List<String> ignorePatterns = githubAccount.getIgnorePatternsAsList();
         List<ChangedFileDto> filteredFiles = changedFiles;
 

@@ -10,6 +10,8 @@ import com.seojs.code_review_platform.pullrequest.dto.ReviewRequestDto;
 import com.seojs.code_review_platform.pullrequest.entity.PullRequest.ReviewStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.ai.retry.NonTransientAiException;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -50,6 +52,10 @@ public class PullRequestReviewListener {
             log.error("invalid api configuration - loginId: {}, repo: {}, pr: {}", loginId, repositoryName, prNumber, e);
             pullRequestService.updateAiReview(repositoryName, loginId, prNumber,
                     "AI review failed: Invalid API configuration", ReviewStatus.FAILED);
+        } catch (NonTransientAiException e) {
+            log.error("invalid api key error - loginId: {}, repo: {}, pr: {}", loginId, repositoryName, prNumber, e);
+            pullRequestService.updateAiReview(repositoryName, loginId, prNumber,
+                    "AI review failed: Invalid API key", ReviewStatus.FAILED);
         } catch (Exception e) {
             log.error("unexpected error - loginId: {}, repo: {}, pr: {}", loginId, repositoryName, prNumber, e);
             pullRequestService.updateAiReview(repositoryName, loginId, prNumber,

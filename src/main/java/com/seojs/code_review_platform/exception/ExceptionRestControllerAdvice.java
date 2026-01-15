@@ -90,4 +90,13 @@ public class ExceptionRestControllerAdvice {
         log.error("{} : {}", errorCode, message);
         return new ErrorDto(errorCode, message);
     }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(OpenAiKeyNotSetEx.class)
+    public ErrorDto openAiKeyNotSet(OpenAiKeyNotSetEx e) {
+        String errorCode = "OPEN_AI_KEY_NOT_SET";
+        String message = e.getMessage();
+        log.error("{} : {}", errorCode, message);
+        return new ErrorDto(errorCode, message);
+    }
 }
