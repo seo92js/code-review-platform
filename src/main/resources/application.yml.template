@@ -21,6 +21,16 @@ spring:
             scope:
               - read:user
               - repo
+  ai:
+    chat:
+      client:
+        enabled: false
+    openai:
+      api-key: YOUR_OPENAI_API_KEY
+      chat:
+        completions-path: /v1/chat/completions
+        options:
+          model: MODEL_NAME
 
 github:
   webhook:
@@ -30,14 +40,3 @@ app:
   frontend-url: YOUR_FRONTEND_URL
   encryption:
     key: YOUR_SECRET_KEY
-
-ai:
-  chat:
-    client:
-      enabled: false
-  openai:
-    api-key: YOUR_OPENAI_API_KEY
-    chat:
-      completions-path: /v1/chat/completions
-      options:
-        model: MODEL_NAME
