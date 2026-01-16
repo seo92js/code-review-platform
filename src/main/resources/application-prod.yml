@@ -1,0 +1,54 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+  application:
+    name: code-review-platform
+  datasource:
+    url: jdbc:postgresql://db:5432/codereview
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${GITHUB_CLIENT_ID}
+            client-secret: ${GITHUB_CLIENT_SECRET}
+            scope:
+              - read:user
+              - repo
+
+github:
+  webhook:
+    url: ${WEBHOOK_URL}
+
+app:
+  frontend-url: ${FRONTEND_URL}
+  encryption:
+    key: ${APP_ENCRYPTION_KEY}
+
+ai:
+  chat:
+    client:
+      enabled: false
+  openai:
+    api-key: ${OPENAI_API_KEY}
+    chat:
+      completions-path: /v1/chat/completions
+      options:
+        model: ${OPENAI_MODEL:gpt-4o-mini}
+
+logging:
+  level:
+    root: INFO
+    com.seojs: INFO
