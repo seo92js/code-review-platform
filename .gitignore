@@ -37,7 +37,7 @@ out/
 .vscode/
 
 application.yml
-application-prod.yml
+# application-prod.yml
 application-local.yml
 
 *.db

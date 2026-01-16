@@ -27,6 +27,7 @@ github:
     url: YOUR_WEBHOOK_URL
 
 app:
+  frontend-url: YOUR_FRONTEND_URL
   encryption:
     key: YOUR_SECRET_KEY
 
