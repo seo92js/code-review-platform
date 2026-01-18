@@ -1,5 +1,6 @@
 package com.seojs.code_review_platform.github.service;
 
+import com.seojs.code_review_platform.ai.service.AiService;
 import com.seojs.code_review_platform.exception.GitHubApiEx;
 import com.seojs.code_review_platform.exception.GithubAccountNotFoundEx;
 import com.seojs.code_review_platform.exception.WebhookRegistrationEx;
@@ -32,6 +33,7 @@ public class GithubService {
     private final GithubAccountRepository githubAccountRepository;
     private final TokenEncryptionService tokenEncryptionService;
     private final PullRequestRepository pullRequestRepository;
+    private final AiService aiService;
     @Qualifier("githubApiExecutor")
     private final Executor githubApiExecutor;
 
@@ -233,6 +235,13 @@ public class GithubService {
             account.updateOpenAiKey(encryptedKey);
         }
         return account.getId();
+    }
+
+    /**
+     * OpenAI API 키 유효성 검증
+     */
+    public boolean validateOpenAiKey(String openAiKey) {
+        return aiService.validateApiKey(openAiKey);
     }
 
     /**

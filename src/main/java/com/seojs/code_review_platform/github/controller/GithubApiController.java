@@ -98,4 +98,9 @@ public class GithubApiController {
         String owner = principal.getAttribute("login");
         return githubService.getMaskedOpenAiKey(owner);
     }
+
+    @PostMapping("/api/github/openai/validate")
+    public boolean validateOpenAiKey(@RequestBody OpenAiKeyDto dto) {
+        return githubService.validateOpenAiKey(dto.getKey());
+    }
 }

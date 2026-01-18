@@ -1,5 +1,6 @@
 package com.seojs.code_review_platform.service;
 
+import com.seojs.code_review_platform.ai.service.AiService;
 import com.seojs.code_review_platform.exception.GithubAccountNotFoundEx;
 import com.seojs.code_review_platform.github.dto.GitRepositoryResponseDto;
 import com.seojs.code_review_platform.github.dto.ReviewSettingsDto;
@@ -49,6 +50,9 @@ class GithubServiceTest {
     @Mock
     private PullRequestRepository pullRequestRepository;
 
+    @Mock
+    private AiService aiService;
+
     private Executor githubApiExecutor = Runnable::run;
 
     private GithubService githubService;
@@ -57,7 +61,7 @@ class GithubServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         githubService = new GithubService(restTemplate, githubAccountRepository, tokenEncryptionService,
-                pullRequestRepository, githubApiExecutor);
+                pullRequestRepository, aiService, githubApiExecutor);
         ReflectionTestUtils.setField(githubService, "webhookUrl", "http://test.com/webhook");
     }
 
@@ -166,9 +170,9 @@ class GithubServiceTest {
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 any(ParameterizedTypeReference.class))).thenReturn(
-                    new ResponseEntity<>(repos, HttpStatus.OK),
-                    new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK),
-                    new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK));
+                new ResponseEntity<>(repos, HttpStatus.OK),
+                new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK),
+                new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK));
 
         // when
         var result = githubService.getRepositoriesWithWebhookStatus(accessToken);
@@ -394,5 +398,33 @@ class GithubServiceTest {
         assertEquals("repo3", result.get(0).getRepository().getName());
         assertEquals("repo2", result.get(1).getRepository().getName());
         assertEquals("repo1", result.get(2).getRepository().getName());
+    }
+
+    @Test
+    void validateOpenAiKey_성공() {
+        // given
+        String validKey = "sk-valid-key";
+        when(aiService.validateApiKey(validKey)).thenReturn(true);
+
+        // when
+        boolean result = githubService.validateOpenAiKey(validKey);
+
+        // then
+        assertTrue(result);
+        verify(aiService).validateApiKey(validKey);
+    }
+
+    @Test
+    void validateOpenAiKey_실패() {
+        // given
+        String invalidKey = "invalid-key";
+        when(aiService.validateApiKey(invalidKey)).thenReturn(false);
+
+        // when
+        boolean result = githubService.validateOpenAiKey(invalidKey);
+
+        // then
+        assertFalse(result);
+        verify(aiService).validateApiKey(invalidKey);
     }
 }
