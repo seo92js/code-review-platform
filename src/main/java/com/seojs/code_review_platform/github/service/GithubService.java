@@ -300,11 +300,15 @@ public class GithubService {
     }
 
     /**
-     * 웹훅 등록
+     * 웹훅 등록 (기존 웹훅이 있다면 삭제 후 재등록)
      */
     public void registerWebhook(String accessToken, String owner, String repository) {
         GithubAccount account = findByLoginIdOrThrow(owner);
 
+        // 기존 웹훅 삭제 (중복 방지 및 시크릿 갱신)
+        deleteExistingWebhook(accessToken, owner, repository);
+
+        // 새 웹훅 등록
         String url = String.format("https://api.github.com/repos/%s/%s/hooks", owner, repository);
 
         WebhookCreateRequestDto request = createWebhookRequest(account.getWebhookSecret());
@@ -318,6 +322,35 @@ public class GithubService {
             }
         } catch (Exception e) {
             throw new WebhookRegistrationEx("Error occurred during webhook registration", e);
+        }
+    }
+
+    /**
+     * 기존에 등록된 웹훅이 있다면 삭제
+     */
+    private void deleteExistingWebhook(String accessToken, String owner, String repo) {
+        String url = String.format("https://api.github.com/repos/%s/%s/hooks", owner, repo);
+        HttpHeaders headers = createAuthHeaders(accessToken);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<List<WebhookResponseDto>> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, new ParameterizedTypeReference<>() {
+                    });
+
+            List<WebhookResponseDto> webhooks = response.getBody();
+            if (webhooks != null) {
+                for (WebhookResponseDto hook : webhooks) {
+                    Object configUrl = hook.getConfig().get("url");
+                    if (configUrl != null && configUrl.toString().equals(webhookUrl)) {
+                        String deleteUrl = String.format("https://api.github.com/repos/%s/%s/hooks/%d", owner, repo,
+                                hook.getId());
+                        restTemplate.exchange(deleteUrl, HttpMethod.DELETE, entity, Void.class);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // 삭제 실패하더라도 등록 시도 (GitHub에서 중복 에러 뱉으면 그때 실패 처리)
         }
     }
 }
