@@ -149,12 +149,16 @@ public class GithubService {
     }
 
     /**
-     * 시스템 프롬프트 조회
+     * 리뷰 설정 조회
      */
     @Transactional(readOnly = true)
-    public String getSystemPrompt(String loginId) {
+    public ReviewSettingsDto getReviewSettings(String loginId) {
         GithubAccount account = findByLoginIdOrThrow(loginId);
-        return account.getSystemPrompt();
+        return new ReviewSettingsDto(
+                account.getReviewTone(),
+                account.getReviewFocus(),
+                account.getDetailLevel(),
+                account.getCustomInstructions());
     }
 
     /**
@@ -196,12 +200,12 @@ public class GithubService {
     }
 
     /**
-     * 시스템 프롬프트 업데이트
+     * 리뷰 설정 업데이트
      */
     @Transactional
-    public Long updateSystemPrompt(String loginId, String systemPrompt) {
+    public Long updateReviewSettings(String loginId, ReviewSettingsDto dto) {
         GithubAccount account = findByLoginIdOrThrow(loginId);
-        account.updateSystemPrompt(systemPrompt);
+        account.updateReviewSettings(dto.getTone(), dto.getFocus(), dto.getDetailLevel(), dto.getCustomInstructions());
         return account.getId();
     }
 
