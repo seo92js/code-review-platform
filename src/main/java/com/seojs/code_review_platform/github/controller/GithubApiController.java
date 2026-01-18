@@ -2,6 +2,7 @@ package com.seojs.code_review_platform.github.controller;
 
 import com.seojs.code_review_platform.github.dto.GitRepositoryWithWebhookResponseDto;
 import com.seojs.code_review_platform.github.dto.OpenAiKeyDto;
+import com.seojs.code_review_platform.github.dto.ReviewSettingsDto;
 import com.seojs.code_review_platform.github.service.GithubService;
 import com.seojs.code_review_platform.pullrequest.service.PullRequestService;
 import lombok.RequiredArgsConstructor;
@@ -60,16 +61,17 @@ public class GithubApiController {
         githubService.registerWebhook(accessToken, owner, repository);
     }
 
-    @GetMapping("/api/github/prompt")
-    public String getSystemPrompt(@AuthenticationPrincipal OAuth2User principal) {
+    @GetMapping("/api/github/review-settings")
+    public ReviewSettingsDto getReviewSettings(@AuthenticationPrincipal OAuth2User principal) {
         String owner = principal.getAttribute("login");
-        return githubService.getSystemPrompt(owner);
+        return githubService.getReviewSettings(owner);
     }
 
-    @PatchMapping("/api/github/prompt")
-    public Long updateSystemPrompt(@AuthenticationPrincipal OAuth2User principal, @RequestParam String prompt) {
+    @PatchMapping("/api/github/review-settings")
+    public Long updateReviewSettings(@AuthenticationPrincipal OAuth2User principal,
+            @RequestBody ReviewSettingsDto dto) {
         String owner = principal.getAttribute("login");
-        return githubService.updateSystemPrompt(owner, prompt);
+        return githubService.updateReviewSettings(owner, dto);
     }
 
     @GetMapping("/api/github/ignore")
@@ -95,5 +97,10 @@ public class GithubApiController {
     public String getOpenAiKey(@AuthenticationPrincipal OAuth2User principal) {
         String owner = principal.getAttribute("login");
         return githubService.getMaskedOpenAiKey(owner);
+    }
+
+    @PostMapping("/api/github/openai/validate")
+    public boolean validateOpenAiKey(@RequestBody OpenAiKeyDto dto) {
+        return githubService.validateOpenAiKey(dto.getKey());
     }
 }

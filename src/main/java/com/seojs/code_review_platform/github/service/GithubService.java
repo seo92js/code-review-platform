@@ -1,5 +1,6 @@
 package com.seojs.code_review_platform.github.service;
 
+import com.seojs.code_review_platform.ai.service.AiService;
 import com.seojs.code_review_platform.exception.GitHubApiEx;
 import com.seojs.code_review_platform.exception.GithubAccountNotFoundEx;
 import com.seojs.code_review_platform.exception.WebhookRegistrationEx;
@@ -32,6 +33,7 @@ public class GithubService {
     private final GithubAccountRepository githubAccountRepository;
     private final TokenEncryptionService tokenEncryptionService;
     private final PullRequestRepository pullRequestRepository;
+    private final AiService aiService;
     @Qualifier("githubApiExecutor")
     private final Executor githubApiExecutor;
 
@@ -149,12 +151,16 @@ public class GithubService {
     }
 
     /**
-     * 시스템 프롬프트 조회
+     * 리뷰 설정 조회
      */
     @Transactional(readOnly = true)
-    public String getSystemPrompt(String loginId) {
+    public ReviewSettingsDto getReviewSettings(String loginId) {
         GithubAccount account = findByLoginIdOrThrow(loginId);
-        return account.getSystemPrompt();
+        return new ReviewSettingsDto(
+                account.getReviewTone(),
+                account.getReviewFocus(),
+                account.getDetailLevel(),
+                account.getCustomInstructions());
     }
 
     /**
@@ -196,12 +202,12 @@ public class GithubService {
     }
 
     /**
-     * 시스템 프롬프트 업데이트
+     * 리뷰 설정 업데이트
      */
     @Transactional
-    public Long updateSystemPrompt(String loginId, String systemPrompt) {
+    public Long updateReviewSettings(String loginId, ReviewSettingsDto dto) {
         GithubAccount account = findByLoginIdOrThrow(loginId);
-        account.updateSystemPrompt(systemPrompt);
+        account.updateReviewSettings(dto.getTone(), dto.getFocus(), dto.getDetailLevel(), dto.getCustomInstructions());
         return account.getId();
     }
 
@@ -229,6 +235,13 @@ public class GithubService {
             account.updateOpenAiKey(encryptedKey);
         }
         return account.getId();
+    }
+
+    /**
+     * OpenAI API 키 유효성 검증
+     */
+    public boolean validateOpenAiKey(String openAiKey) {
+        return aiService.validateApiKey(openAiKey);
     }
 
     /**

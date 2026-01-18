@@ -37,7 +37,7 @@ public class PullRequestReviewListener {
         String model = dto.getModel();
 
         GithubAccount githubAccount = githubService.findByLoginIdOrThrow(loginId);
-        String systemPrompt = githubAccount.getSystemPrompt();
+        String systemPrompt = githubAccount.buildSystemPrompt();
         String openApiKey = githubService.getOpenAiKey(loginId);
 
         try {

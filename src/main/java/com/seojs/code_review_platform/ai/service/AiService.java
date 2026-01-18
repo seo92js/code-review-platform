@@ -37,4 +37,17 @@ public class AiService {
                 .call()
                 .content();
     }
+
+    public boolean validateApiKey(String apiKey) {
+        if (apiKey == null || apiKey.isBlank()) {
+            return false;
+        }
+        try {
+            // 최소 토큰으로 API 호출 시도
+            callAiChat(apiKey, "Validation", "ping", "gpt-4o-mini", 0.1);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }
