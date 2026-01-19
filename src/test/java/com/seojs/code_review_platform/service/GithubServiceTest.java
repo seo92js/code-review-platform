@@ -326,10 +326,10 @@ class GithubServiceTest {
 
         // then
         assertEquals(expectedId, result);
-        assertEquals(ReviewTone.FRIENDLY, account.getReviewTone());
-        assertEquals(ReviewFocus.PRAISE_ONLY, account.getReviewFocus());
-        assertEquals(DetailLevel.DETAILED, account.getDetailLevel());
-        assertEquals("보안에 집중해주세요", account.getCustomInstructions());
+        assertEquals(ReviewTone.FRIENDLY, account.getAiSettings().getReviewTone());
+        assertEquals(ReviewFocus.PRAISE_ONLY, account.getAiSettings().getReviewFocus());
+        assertEquals(DetailLevel.DETAILED, account.getAiSettings().getDetailLevel());
+        assertEquals("보안에 집중해주세요", account.getAiSettings().getCustomInstructions());
         verify(githubAccountRepository).findByLoginId(loginId);
     }
 
