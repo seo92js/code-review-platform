@@ -104,11 +104,12 @@ public class PullRequestService {
 
         GithubAccount githubAccount = pr.getGithubAccount();
 
-        if (githubAccount.getOpenAiKey() == null || githubAccount.getOpenAiKey().isEmpty()) {
+        if (githubAccount.getAiSettings().getOpenAiKey() == null
+                || githubAccount.getAiSettings().getOpenAiKey().isEmpty()) {
             throw new OpenAiKeyNotSetEx("OpenAI API key is not set. Please set it in the settings.");
         }
 
-        List<String> ignorePatterns = githubAccount.getIgnorePatternsAsList();
+        List<String> ignorePatterns = githubAccount.getAiSettings().getIgnorePatternsAsList();
         List<ChangedFileDto> filteredFiles = changedFiles;
 
         if (!ignorePatterns.isEmpty()) {

@@ -5,6 +5,7 @@ import com.seojs.code_review_platform.exception.GitHubApiEx;
 import com.seojs.code_review_platform.exception.GithubAccountNotFoundEx;
 import com.seojs.code_review_platform.exception.WebhookRegistrationEx;
 import com.seojs.code_review_platform.github.dto.*;
+import com.seojs.code_review_platform.github.entity.AiReviewSettings;
 import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository;
@@ -156,11 +157,12 @@ public class GithubService {
     @Transactional(readOnly = true)
     public ReviewSettingsDto getReviewSettings(String loginId) {
         GithubAccount account = findByLoginIdOrThrow(loginId);
+        AiReviewSettings settings = account.getAiSettings();
         return new ReviewSettingsDto(
-                account.getReviewTone(),
-                account.getReviewFocus(),
-                account.getDetailLevel(),
-                account.getCustomInstructions());
+                settings.getReviewTone(),
+                settings.getReviewFocus(),
+                settings.getDetailLevel(),
+                settings.getCustomInstructions());
     }
 
     /**
@@ -169,11 +171,7 @@ public class GithubService {
     @Transactional(readOnly = true)
     public List<String> getIgnorePatterns(String loginId) {
         GithubAccount account = findByLoginIdOrThrow(loginId);
-        String patterns = account.getIgnorePatterns();
-        if (patterns == null || patterns.isBlank()) {
-            return Collections.emptyList();
-        }
-        return Arrays.asList(patterns.split("\\s*,\\s*"));
+        return account.getAiSettings().getIgnorePatternsAsList();
     }
 
     /**
@@ -182,7 +180,7 @@ public class GithubService {
     @Transactional(readOnly = true)
     public String getOpenAiKey(String loginId) {
         GithubAccount account = findByLoginIdOrThrow(loginId);
-        String encryptedKey = account.getOpenAiKey();
+        String encryptedKey = account.getAiSettings().getOpenAiKey();
         if (encryptedKey == null || encryptedKey.isBlank()) {
             return null;
         }
@@ -207,7 +205,8 @@ public class GithubService {
     @Transactional
     public Long updateReviewSettings(String loginId, ReviewSettingsDto dto) {
         GithubAccount account = findByLoginIdOrThrow(loginId);
-        account.updateReviewSettings(dto.getTone(), dto.getFocus(), dto.getDetailLevel(), dto.getCustomInstructions());
+        account.getAiSettings().updateReviewSettings(dto.getTone(), dto.getFocus(), dto.getDetailLevel(),
+                dto.getCustomInstructions());
         return account.getId();
     }
 
@@ -218,7 +217,7 @@ public class GithubService {
     public Long updateIgnorePatterns(String loginId, List<String> patterns) {
         GithubAccount account = findByLoginIdOrThrow(loginId);
         String patternsString = patterns == null ? "" : String.join(",", patterns);
-        account.updateIgnorePatterns(patternsString);
+        account.getAiSettings().updateIgnorePatterns(patternsString);
         return account.getId();
     }
 
@@ -229,10 +228,10 @@ public class GithubService {
     public Long updateOpenAiKey(String loginId, String openAiKey) {
         GithubAccount account = findByLoginIdOrThrow(loginId);
         if (openAiKey == null || openAiKey.isBlank()) {
-            account.updateOpenAiKey(null);
+            account.getAiSettings().updateOpenAiKey(null);
         } else {
             String encryptedKey = tokenEncryptionService.encryptToken(openAiKey);
-            account.updateOpenAiKey(encryptedKey);
+            account.getAiSettings().updateOpenAiKey(encryptedKey);
         }
         return account.getId();
     }

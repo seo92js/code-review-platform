@@ -37,7 +37,7 @@ public class PullRequestReviewListener {
         String model = dto.getModel();
 
         GithubAccount githubAccount = githubService.findByLoginIdOrThrow(loginId);
-        String systemPrompt = githubAccount.buildSystemPrompt();
+        String systemPrompt = githubAccount.getAiSettings().buildSystemPrompt();
         String openApiKey = githubService.getOpenAiKey(loginId);
 
         try {
@@ -49,7 +49,8 @@ public class PullRequestReviewListener {
             pullRequestService.updateAiReview(repositoryName, loginId, prNumber,
                     "AI review failed: Json processing failed", ReviewStatus.FAILED);
         } catch (IllegalArgumentException e) {
-            log.error("invalid api configuration - loginId: {}, repo: {}, pr: {}", loginId, repositoryName, prNumber, e);
+            log.error("invalid api configuration - loginId: {}, repo: {}, pr: {}", loginId, repositoryName, prNumber,
+                    e);
             pullRequestService.updateAiReview(repositoryName, loginId, prNumber,
                     "AI review failed: Invalid API configuration", ReviewStatus.FAILED);
         } catch (NonTransientAiException e) {
