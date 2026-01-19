@@ -28,14 +28,23 @@ public class GithubAccount {
     }
 
     /**
-     * AiReviewSettings를 안전하게 가져오는 편의 메서드
-     * 설정이 없으면 새로 생성
+     * AiReviewSettings 설정
      */
-    public AiReviewSettings getAiSettings() {
+    public void initializeAiSettings() {
         if (this.aiSettings == null) {
             this.aiSettings = AiReviewSettings.builder()
                     .githubAccount(this)
                     .build();
+        }
+    }
+
+    /**
+     * AiReviewSettings 안전하게 가져오기
+     * 설정이 없으면 새로 생성하고 초기화
+     */
+    public AiReviewSettings getAiSettings() {
+        if (this.aiSettings == null) {
+            initializeAiSettings();
         }
         return this.aiSettings;
     }
@@ -45,8 +54,5 @@ public class GithubAccount {
         this.loginId = loginId;
         this.accessToken = accessToken;
         this.webhookSecret = webhookSecret;
-        this.aiSettings = AiReviewSettings.builder()
-                .githubAccount(this)
-                .build();
     }
 }
