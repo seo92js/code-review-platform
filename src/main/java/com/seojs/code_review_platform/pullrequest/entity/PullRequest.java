@@ -59,10 +59,11 @@ public class PullRequest {
     }
 
     public enum ReviewStatus {
-        PENDING,        // 리뷰 대기 중
-        IN_PROGRESS,    // 리뷰 진행 중
-        COMPLETED,      // 리뷰 완료
-        FAILED          // 리뷰 실패
+        PENDING, // 리뷰 대기 중
+        IN_PROGRESS, // 리뷰 진행 중
+        COMPLETED, // 리뷰 완료
+        FAILED, // 리뷰 실패
+        NEW_CHANGES // 리뷰 후 새 변경사항 있음
     }
 
     public void updateStatus(ReviewStatus newStatus) {
@@ -81,7 +82,8 @@ public class PullRequest {
     }
 
     @Builder
-    public PullRequest(Integer prNumber, String repositoryName, GithubAccount githubAccount, String title, String action, ReviewStatus status) {
+    public PullRequest(Integer prNumber, String repositoryName, GithubAccount githubAccount, String title,
+            String action, ReviewStatus status) {
         this.prNumber = prNumber;
         this.repositoryName = repositoryName;
         this.githubAccount = githubAccount;
@@ -90,4 +92,4 @@ public class PullRequest {
         this.status = status;
         this.aiReview = null;
     }
-} 
+}

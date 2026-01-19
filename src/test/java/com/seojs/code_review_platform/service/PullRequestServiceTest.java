@@ -50,7 +50,8 @@ class PullRequestServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        pullRequestService = new PullRequestService(pullRequestRepository, githubService, webhookSecurityService, objectMapper, eventPublisher);
+        pullRequestService = new PullRequestService(pullRequestRepository, githubService,
+                                webhookSecurityService, objectMapper, eventPublisher);
     }
 
     @Test
@@ -58,7 +59,7 @@ class PullRequestServiceTest {
         // given
         String loginId = "test-owner";
         String repositoryName = "test-repo";
-        
+
         // 테스트용 GithubAccount 생성
         GithubAccount githubAccount = GithubAccount.builder()
                 .loginId(loginId)
@@ -87,7 +88,8 @@ class PullRequestServiceTest {
         List<PullRequest> pullRequests = Arrays.asList(pr1, pr2);
 
         // Repository mock 설정
-        when(pullRequestRepository.findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId, repositoryName))
+        when(pullRequestRepository.findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId,
+                                repositoryName))
                 .thenReturn(pullRequests);
 
         // when
@@ -95,33 +97,35 @@ class PullRequestServiceTest {
 
         // then
         assertEquals(2, result.size());
-        
+
         // 첫 번째 PR 검증
         PullRequestResponseDto firstPr = result.get(0);
         assertEquals(1, firstPr.getPrNumber());
         assertEquals("첫 번째 PR", firstPr.getTitle());
         assertEquals("opened", firstPr.getAction());
         assertEquals(PullRequest.ReviewStatus.PENDING, firstPr.getStatus());
-        
+
         // 두 번째 PR 검증
         PullRequestResponseDto secondPr = result.get(1);
         assertEquals(2, secondPr.getPrNumber());
         assertEquals("두 번째 PR", secondPr.getTitle());
         assertEquals("synchronize", secondPr.getAction());
         assertEquals(PullRequest.ReviewStatus.COMPLETED, secondPr.getStatus());
-        
+
         // Repository 메서드 호출 검증
-        verify(pullRequestRepository).findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId, repositoryName);
-    }
+        verify(pullRequestRepository).findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId,
+                repositoryName);
+        }
 
     @Test
     void getPullRequestList_빈리스트반환() {
         // given
         String loginId = "test-owner";
         String repositoryName = "test-repo";
-        
+
         // Repository에서 빈 리스트 반환
-        when(pullRequestRepository.findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId, repositoryName))
+        when(pullRequestRepository.findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId,
+                repositoryName))
                 .thenReturn(Arrays.asList());
 
         // when
@@ -130,9 +134,10 @@ class PullRequestServiceTest {
         // then
         assertTrue(result.isEmpty());
         assertEquals(0, result.size());
-        
+
         // Repository 메서드 호출 검증
-        verify(pullRequestRepository).findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId, repositoryName);
+        verify(pullRequestRepository).findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId,
+                repositoryName);
     }
 
     @Test
@@ -140,9 +145,10 @@ class PullRequestServiceTest {
         // given
         String loginId = "test-owner";
         String repositoryName = "test-repo";
-        
+
         // Repository에서 빈 리스트 반환 (다른 저장소는 조회되지 않음)
-        when(pullRequestRepository.findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId, repositoryName))
+        when(pullRequestRepository.findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId,
+                repositoryName))
                 .thenReturn(Arrays.asList());
 
         // when
@@ -150,7 +156,8 @@ class PullRequestServiceTest {
 
         // then
         assertTrue(result.isEmpty());
-        verify(pullRequestRepository).findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId, repositoryName);
+        verify(pullRequestRepository).findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId,
+                repositoryName);
     }
 
     @Test
@@ -158,9 +165,10 @@ class PullRequestServiceTest {
         // given
         String loginId = "test-owner";
         String repositoryName = "test-repo";
-        
+
         // Repository에서 빈 리스트 반환 (다른 소유자는 조회되지 않음)
-        when(pullRequestRepository.findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId, repositoryName))
+        when(pullRequestRepository.findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId,
+                repositoryName))
                 .thenReturn(Arrays.asList());
 
         // when
@@ -168,7 +176,8 @@ class PullRequestServiceTest {
 
         // then
         assertTrue(result.isEmpty());
-        verify(pullRequestRepository).findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId, repositoryName);
+        verify(pullRequestRepository).findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId,
+                repositoryName);
     }
 
     @Test
@@ -176,9 +185,8 @@ class PullRequestServiceTest {
         // given
         String loginId = "test-owner";
         String repositoryName = "test-repo";
-        
+
         // 업데이트 시간이 다른 PR들 생성
-        // 테스트용 GithubAccount 생성
         GithubAccount githubAccount = GithubAccount.builder()
                 .loginId(loginId)
                 .accessToken("test-token")
@@ -214,7 +222,8 @@ class PullRequestServiceTest {
         // Repository에서 정렬된 순서로 반환 (updatedAt 내림차순)
         List<PullRequest> pullRequests = Arrays.asList(newPr, middlePr, oldPr);
 
-        when(pullRequestRepository.findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId, repositoryName))
+        when(pullRequestRepository.findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId,
+                repositoryName))
                 .thenReturn(pullRequests);
 
         // when
@@ -222,13 +231,14 @@ class PullRequestServiceTest {
 
         // then
         assertEquals(3, result.size());
-        
+
         // 정렬 순서 확인 (updatedAt 내림차순)
         assertEquals(2, result.get(0).getPrNumber());
         assertEquals(3, result.get(1).getPrNumber());
         assertEquals(1, result.get(2).getPrNumber());
-        
-        verify(pullRequestRepository).findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId, repositoryName);
+
+        verify(pullRequestRepository).findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId,
+                repositoryName);
     }
 
     @Test
@@ -236,12 +246,14 @@ class PullRequestServiceTest {
         // given
         String payload = "{\"action\":\"opened\",\"pull_request\":{\"number\":1,\"title\":\"Test PR\"},\"repository\":{\"name\":\"test-repo\",\"owner\":{\"login\":\"test-owner\"}}}";
 
-        WebhookPayloadDto webhookPayload = createWebhookPayload("opened", 1, "Test PR", "test-repo", "test-owner");
+        WebhookPayloadDto webhookPayload = createWebhookPayload("opened", 1, "Test PR", "test-repo",
+                "test-owner");
 
         when(objectMapper.readValue(payload, WebhookPayloadDto.class))
                 .thenReturn(webhookPayload);
 
-        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber("test-repo", "test-owner", 1))
+        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber("test-repo",
+                "test-owner", 1))
                 .thenReturn(Optional.empty());
 
         // GithubService mock 설정
@@ -273,7 +285,8 @@ class PullRequestServiceTest {
         // given
         String payload = "{\"action\":\"synchronize\",\"pull_request\":{\"number\":1,\"title\":\"Updated PR\"},\"repository\":{\"name\":\"test-repo\",\"owner\":{\"login\":\"test-owner\"}}}";
 
-        WebhookPayloadDto webhookPayload = createWebhookPayload("synchronize", 1, "Updated PR", "test-repo", "test-owner");
+        WebhookPayloadDto webhookPayload = createWebhookPayload("synchronize", 1, "Updated PR", "test-repo",
+                "test-owner");
 
         // GithubAccount 생성
         GithubAccount githubAccount = GithubAccount.builder()
@@ -293,7 +306,8 @@ class PullRequestServiceTest {
         when(objectMapper.readValue(payload, WebhookPayloadDto.class))
                 .thenReturn(webhookPayload);
 
-        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber("test-repo", "test-owner", 1))
+        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber("test-repo",
+                "test-owner", 1))
                 .thenReturn(Optional.of(existingPr));
 
         // when
@@ -301,7 +315,8 @@ class PullRequestServiceTest {
 
         // then
         verify(pullRequestRepository).save(existingPr);
-        assertEquals(PullRequest.ReviewStatus.PENDING, existingPr.getStatus());
+        // COMPLETED 상태에서 synchronize 시 NEW_CHANGES로 변경
+        assertEquals(PullRequest.ReviewStatus.NEW_CHANGES, existingPr.getStatus());
         assertEquals("synchronize", existingPr.getAction());
     }
 
@@ -310,7 +325,8 @@ class PullRequestServiceTest {
         // given
         String payload = "{\"action\":\"assigned\",\"pull_request\":{\"number\":1,\"title\":\"Test PR\"},\"repository\":{\"name\":\"test-repo\",\"owner\":{\"login\":\"test-owner\"}}}";
 
-        WebhookPayloadDto webhookPayload = createWebhookPayload("assigned", 1, "Test PR", "test-repo", "test-owner");
+        WebhookPayloadDto webhookPayload = createWebhookPayload("assigned", 1, "Test PR", "test-repo",
+                "test-owner");
 
         when(objectMapper.readValue(payload, WebhookPayloadDto.class))
                 .thenReturn(webhookPayload);
@@ -332,7 +348,8 @@ class PullRequestServiceTest {
 
         // when & then
         RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> pullRequestService.processAndSaveWebhook(invalidPayload, "sha256=test-signature"));
+                () -> pullRequestService.processAndSaveWebhook(invalidPayload,
+                        "sha256=test-signature"));
 
         assertEquals("Webhook processing failed", exception.getMessage());
     }
@@ -373,8 +390,7 @@ class PullRequestServiceTest {
                 "https://github.com/test-owner/test-repo/blob/main/src/main/java/Example.java",
                 "https://raw.githubusercontent.com/test-owner/test-repo/main/src/main/java/Example.java",
                 "https://api.github.com/repos/test-owner/test-repo/contents/src/main/java/Example.java",
-                "@@ -1,3 +1,4 @@\n public class Example {\n+    // 새로운 주석\n     private String name;\n-    private int age;\n+    private String age;\n"
-        );
+                "@@ -1,3 +1,4 @@\n public class Example {\n+    // 새로운 주석\n     private String name;\n-    private int age;\n+    private String age;\n");
 
         ChangedFileDto changedFile2 = new ChangedFileDto(
                 "README.md",
@@ -387,13 +403,13 @@ class PullRequestServiceTest {
                 "https://github.com/test-owner/test-repo/blob/main/README.md",
                 "https://raw.githubusercontent.com/test-owner/test-repo/main/README.md",
                 "https://api.github.com/repos/test-owner/test-repo/contents/README.md",
-                "@@ -0,0 +1,10 @@\n+# Test Repository\n+This is a test repository.\n+\n+## Features\n+- Feature 1\n+- Feature 2\n+\n+## Usage\n+See the documentation.\n"
-        );
+                "@@ -0,0 +1,10 @@\n+# Test Repository\n+This is a test repository.\n+\n+## Features\n+- Feature 1\n+- Feature 2\n+\n+## Usage\n+See the documentation.\n");
 
         List<ChangedFileDto> expectedChangedFiles = Arrays.asList(changedFile1, changedFile2);
 
         // Repository mock 설정
-        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber))
+        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName,
+                loginId, prNumber))
                 .thenReturn(Optional.of(pullRequest));
 
         // GithubService mock 설정
@@ -401,11 +417,12 @@ class PullRequestServiceTest {
                 .thenReturn(expectedChangedFiles);
 
         // when
-        List<ChangedFileDto> result = pullRequestService.getPullRequestWithChanges(loginId, repositoryName, prNumber, accessToken);
+        List<ChangedFileDto> result = pullRequestService.getPullRequestWithChanges(loginId, repositoryName,
+                prNumber, accessToken);
 
         // then
         assertEquals(2, result.size());
-        
+
         // 첫 번째 파일 검증
         ChangedFileDto firstFile = result.get(0);
         assertEquals("src/main/java/Example.java", firstFile.getFilename());
@@ -428,7 +445,8 @@ class PullRequestServiceTest {
         assertTrue(secondFile.getPatch().contains("# Test Repository"));
 
         // Repository와 GithubService 메서드 호출 검증
-        verify(pullRequestRepository).findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber);
+        verify(pullRequestRepository).findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName,
+                loginId, prNumber);
         verify(githubService).getChangedFiles(accessToken, loginId, repositoryName, prNumber);
     }
 
@@ -441,17 +459,21 @@ class PullRequestServiceTest {
         String accessToken = "test-access-token";
 
         // Repository에서 PR을 찾지 못함
-        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber))
+        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName,
+                loginId, prNumber))
                 .thenReturn(Optional.empty());
 
         // when & then
         PullRequestNotFoundEx exception = assertThrows(PullRequestNotFoundEx.class,
-                () -> pullRequestService.getPullRequestWithChanges(loginId, repositoryName, prNumber, accessToken));
+                () -> pullRequestService.getPullRequestWithChanges(loginId, repositoryName, prNumber,
+                        accessToken));
 
-        assertEquals("Pull request not found for repositoryName: test-repo, loginId: test-owner, prNumber: 999", exception.getMessage());
-        
+        assertEquals("Pull request not found for repositoryName: test-repo, loginId: test-owner, prNumber: 999",
+                exception.getMessage());
+
         // Repository 메서드 호출 검증
-        verify(pullRequestRepository).findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber);
+        verify(pullRequestRepository).findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName,
+                loginId, prNumber);
         // GithubService는 호출되지 않아야 함
         verify(githubService, never()).getChangedFiles(anyString(), anyString(), anyString(), anyInt());
     }
@@ -481,7 +503,8 @@ class PullRequestServiceTest {
                 .build();
 
         // Repository mock 설정
-        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber))
+        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName,
+                loginId, prNumber))
                 .thenReturn(Optional.of(pullRequest));
 
         // GithubService에서 빈 리스트 반환
@@ -489,14 +512,16 @@ class PullRequestServiceTest {
                 .thenReturn(Arrays.asList());
 
         // when
-        List<ChangedFileDto> result = pullRequestService.getPullRequestWithChanges(loginId, repositoryName, prNumber, accessToken);
+        List<ChangedFileDto> result = pullRequestService.getPullRequestWithChanges(loginId, repositoryName,
+                prNumber, accessToken);
 
         // then
         assertTrue(result.isEmpty());
         assertEquals(0, result.size());
 
         // Repository와 GithubService 메서드 호출 검증
-        verify(pullRequestRepository).findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber);
+        verify(pullRequestRepository).findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName,
+                loginId, prNumber);
         verify(githubService).getChangedFiles(accessToken, loginId, repositoryName, prNumber);
     }
 
@@ -525,7 +550,8 @@ class PullRequestServiceTest {
                 .build();
 
         // Repository mock 설정
-        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber))
+        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName,
+                loginId, prNumber))
                 .thenReturn(Optional.of(pullRequest));
 
         // GithubService에서 예외 발생
@@ -534,12 +560,14 @@ class PullRequestServiceTest {
 
         // when & then
         RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> pullRequestService.getPullRequestWithChanges(loginId, repositoryName, prNumber, accessToken));
+                () -> pullRequestService.getPullRequestWithChanges(loginId, repositoryName, prNumber,
+                        accessToken));
 
         assertEquals("GitHub API call failed", exception.getMessage());
 
         // Repository와 GithubService 메서드 호출 검증
-        verify(pullRequestRepository).findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber);
+        verify(pullRequestRepository).findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName,
+                loginId, prNumber);
         verify(githubService).getChangedFiles(accessToken, loginId, repositoryName, prNumber);
     }
 
@@ -553,25 +581,31 @@ class PullRequestServiceTest {
         String accessToken = "test-access-token";
 
         // Repository에서 PR을 찾지 못함 (다른 저장소)
-        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(differentRepository, loginId, prNumber))
+        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(differentRepository,
+                loginId, prNumber))
                 .thenReturn(Optional.empty());
 
         // when & then
         PullRequestNotFoundEx exception = assertThrows(PullRequestNotFoundEx.class,
-                () -> pullRequestService.getPullRequestWithChanges(loginId, differentRepository, prNumber, accessToken));
+                () -> pullRequestService.getPullRequestWithChanges(loginId, differentRepository,
+                        prNumber, accessToken));
 
-        assertEquals("Pull request not found for repositoryName: different-repo, loginId: test-owner, prNumber: 123", exception.getMessage());
+        assertEquals("Pull request not found for repositoryName: different-repo, loginId: test-owner, prNumber: 123",
+                exception.getMessage());
 
         // Repository 메서드 호출 검증
-        verify(pullRequestRepository).findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(differentRepository, loginId, prNumber);
+        verify(pullRequestRepository).findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(
+                differentRepository, loginId, prNumber);
         // GithubService는 호출되지 않아야 함
         verify(githubService, never()).getChangedFiles(anyString(), anyString(), anyString(), anyInt());
     }
 
-    private WebhookPayloadDto createWebhookPayload(String action, int prNumber, String title, String repoName, String ownerLogin) {
+    private WebhookPayloadDto createWebhookPayload(String action, int prNumber, String title, String repoName,
+            String ownerLogin) {
         UserDto owner = new UserDto(ownerLogin, 1, "http://test.com/user");
         RepositoryDto repository = new RepositoryDto(repoName, repoName + "/" + ownerLogin, owner);
-        PullRequestDto pullRequest = new PullRequestDto(prNumber, title, "body", "open", owner, "http://test.com/pr", "http://test.com/diff");
+        PullRequestDto pullRequest = new PullRequestDto(prNumber, title, "body", "open", owner,
+                "http://test.com/pr", "http://test.com/diff");
 
         return new WebhookPayloadDto(action, pullRequest, repository);
     }
@@ -595,7 +629,8 @@ class PullRequestServiceTest {
                 .build();
         pullRequest.updateAiReview(expectedReview);
 
-        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber))
+        when(pullRequestRepository.findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName,
+                loginId, prNumber))
                 .thenReturn(Optional.of(pullRequest));
 
         // when
@@ -603,6 +638,7 @@ class PullRequestServiceTest {
 
         // then
         assertEquals(expectedReview, actualReview);
-        verify(pullRequestRepository).findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber);
+        verify(pullRequestRepository).findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName,
+                loginId, prNumber);
     }
 }
