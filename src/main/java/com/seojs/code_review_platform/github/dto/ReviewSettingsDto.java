@@ -15,4 +15,6 @@ public class ReviewSettingsDto {
     private ReviewFocus focus;
     private DetailLevel detailLevel;
     private String customInstructions;
+    private Boolean autoReviewEnabled;
+    private String openaiModel;
 }

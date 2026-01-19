@@ -40,20 +40,30 @@ public class AiReviewSettings {
     @Column
     private String openAiKey;
 
+    @Column(nullable = false)
+    private Boolean autoReviewEnabled = false;
+
+    @Column(nullable = false)
+    private String openaiModel = "gpt-4o-mini";
+
     @Builder
     public AiReviewSettings(GithubAccount githubAccount) {
         this.githubAccount = githubAccount;
         this.reviewTone = ReviewTone.NEUTRAL;
         this.reviewFocus = ReviewFocus.BOTH;
         this.detailLevel = DetailLevel.STANDARD;
+        this.autoReviewEnabled = false;
+        this.openaiModel = "gpt-4o-mini";
     }
 
     public void updateReviewSettings(ReviewTone tone, ReviewFocus focus, DetailLevel detailLevel,
-            String customInstructions) {
+            String customInstructions, Boolean autoReviewEnabled, String openaiModel) {
         this.reviewTone = tone;
         this.reviewFocus = focus;
         this.detailLevel = detailLevel;
         this.customInstructions = customInstructions;
+        this.autoReviewEnabled = autoReviewEnabled != null ? autoReviewEnabled : false;
+        this.openaiModel = openaiModel != null ? openaiModel : "gpt-4o-mini";
     }
 
     public void updateIgnorePatterns(String ignorePatterns) {

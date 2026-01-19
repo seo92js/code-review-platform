@@ -162,7 +162,9 @@ public class GithubService {
                 settings.getReviewTone(),
                 settings.getReviewFocus(),
                 settings.getDetailLevel(),
-                settings.getCustomInstructions());
+                settings.getCustomInstructions(),
+                settings.getAutoReviewEnabled(),
+                settings.getOpenaiModel());
     }
 
     /**
@@ -206,7 +208,7 @@ public class GithubService {
     public Long updateReviewSettings(String loginId, ReviewSettingsDto dto) {
         GithubAccount account = findByLoginIdOrThrow(loginId);
         account.getAiSettings().updateReviewSettings(dto.getTone(), dto.getFocus(), dto.getDetailLevel(),
-                dto.getCustomInstructions());
+                dto.getCustomInstructions(), dto.getAutoReviewEnabled(), dto.getOpenaiModel());
         return account.getId();
     }
 

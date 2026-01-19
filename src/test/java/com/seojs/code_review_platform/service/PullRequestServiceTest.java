@@ -10,6 +10,7 @@ import com.seojs.code_review_platform.github.dto.WebhookPayloadDto.UserDto;
 import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.service.GithubService;
 import com.seojs.code_review_platform.github.service.WebhookSecurityService;
+import com.seojs.code_review_platform.github.service.TokenEncryptionService;
 import com.seojs.code_review_platform.pullrequest.dto.PullRequestResponseDto;
 import com.seojs.code_review_platform.pullrequest.entity.PullRequest;
 import com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository;
@@ -45,13 +46,16 @@ class PullRequestServiceTest {
     @Mock
     private ObjectMapper objectMapper;
 
+    @Mock
+    private TokenEncryptionService tokenEncryptionService;
+
     private PullRequestService pullRequestService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
         pullRequestService = new PullRequestService(pullRequestRepository, githubService,
-                                webhookSecurityService, objectMapper, eventPublisher);
+                        webhookSecurityService, objectMapper, eventPublisher, tokenEncryptionService);
     }
 
     @Test
@@ -89,7 +93,7 @@ class PullRequestServiceTest {
 
         // Repository mock 설정
         when(pullRequestRepository.findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId,
-                                repositoryName))
+                repositoryName))
                 .thenReturn(pullRequests);
 
         // when
@@ -115,7 +119,7 @@ class PullRequestServiceTest {
         // Repository 메서드 호출 검증
         verify(pullRequestRepository).findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId,
                 repositoryName);
-        }
+    }
 
     @Test
     void getPullRequestList_빈리스트반환() {
