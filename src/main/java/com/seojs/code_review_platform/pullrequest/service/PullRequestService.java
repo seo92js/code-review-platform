@@ -184,9 +184,15 @@ public class PullRequestService {
      * 기존 PR 업데이트
      */
     private void updateExistingPullRequest(PullRequest existingPr, String action) {
-        existingPr.updateStatus(ReviewStatus.PENDING);
-        existingPr.updateAction(action);
+        ReviewStatus currentStatus = existingPr.getStatus();
 
+        // COMPLETED, FAILED 상태에서 새 변경사항이 있으면 NEW_CHANGES로 변경
+        if (currentStatus == ReviewStatus.COMPLETED || currentStatus == ReviewStatus.FAILED) {
+            existingPr.updateStatus(ReviewStatus.NEW_CHANGES);
+        }
+        // PENDING, IN_PROGRESS, NEW_CHANGES는 상태 유지
+
+        existingPr.updateAction(action);
         pullRequestRepository.save(existingPr);
     }
 
