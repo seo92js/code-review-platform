@@ -1,5 +1,7 @@
 # Code Review Platform (Backend)
 
+**URL**: [https://aisenpai.dev](https://aisenpai.dev)
+
 ## 1. 서비스 소개
 **Code Review Platform**은 GitHub Pull Request를 연동하여 AI가 코드 리뷰를 수행하는 서비스입니다.
 개발자가 작성한 코드의 변경 사항을 AI가 분석하고, 개선점이나 잠재적인 버그를 찾아 GitHub 코멘트로 피드백을 제공합니다.
