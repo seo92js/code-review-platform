@@ -27,24 +27,24 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         if (loginId != null && accessToken != null) {
             String encryptedToken = tokenEncryptionService.encryptToken(accessToken);
             githubAccountRepository.findByLoginId(loginId)
-                .ifPresentOrElse(
-                    account -> {
-                        account.updateAccessToken(encryptedToken);
-                    },
-                    () -> {
-                        String webhookSecret = generateWebhookSecret();
-                        GithubAccount newAccount = GithubAccount.builder()
-                            .loginId(loginId)
-                            .accessToken(encryptedToken)
-                            .webhookSecret(webhookSecret)
-                            .build();
-                        githubAccountRepository.save(newAccount);
-                    }
-                );
+                    .ifPresentOrElse(
+                            account -> {
+                                account.updateAccessToken(encryptedToken);
+                            },
+                            () -> {
+                                String webhookSecret = generateWebhookSecret();
+                                GithubAccount newAccount = GithubAccount.builder()
+                                        .loginId(loginId)
+                                        .accessToken(encryptedToken)
+                                        .webhookSecret(webhookSecret)
+                                        .build();
+                                githubAccountRepository.save(newAccount);
+                                newAccount.initializeAiSettings();
+                            });
         }
         return oAuth2User;
     }
-    
+
     /**
      * 웹훅 시크릿 생성
      */
