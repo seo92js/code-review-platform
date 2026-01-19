@@ -8,6 +8,7 @@ import com.seojs.code_review_platform.github.dto.ChangedFileDto;
 import com.seojs.code_review_platform.github.dto.WebhookPayloadDto;
 import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.service.GithubService;
+import com.seojs.code_review_platform.github.service.TokenEncryptionService;
 import com.seojs.code_review_platform.github.service.WebhookSecurityService;
 import com.seojs.code_review_platform.pullrequest.dto.PullRequestResponseDto;
 import com.seojs.code_review_platform.pullrequest.dto.ReviewRequestDto;
@@ -15,6 +16,7 @@ import com.seojs.code_review_platform.pullrequest.entity.PullRequest;
 import com.seojs.code_review_platform.pullrequest.entity.PullRequest.ReviewStatus;
 import com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,7 @@ import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.util.List;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class PullRequestService {
@@ -32,6 +35,7 @@ public class PullRequestService {
     private final WebhookSecurityService webhookSecurityService;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final TokenEncryptionService tokenEncryptionService;
 
     /**
      * PR 웹훅 이벤트를 처리하고 데이터베이스에 저장
@@ -246,5 +250,16 @@ public class PullRequestService {
                 .build();
 
         pullRequestRepository.save(newPr);
+
+        if (Boolean.TRUE.equals(githubAccount.getAiSettings().getAutoReviewEnabled())) {
+            try {
+                String accessToken = tokenEncryptionService.decryptToken(githubAccount.getAccessToken());
+                String model = githubAccount.getAiSettings().getOpenaiModel();
+                review(loginId, repoName, prNumber, accessToken, model);
+                log.info("Auto review triggered for PR #{} in {}/{}", prNumber, loginId, repoName);
+            } catch (Exception e) {
+                log.warn("Auto review failed for PR #{} in {}/{}: {}", prNumber, loginId, repoName, e.getMessage());
+            }
+        }
     }
 }

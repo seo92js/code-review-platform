@@ -319,7 +319,9 @@ class GithubServiceTest {
                 ReviewTone.FRIENDLY,
                 ReviewFocus.PRAISE_ONLY,
                 DetailLevel.DETAILED,
-                "보안에 집중해주세요");
+                "보안에 집중해주세요",
+                true,
+                "gpt-4o-mini");
 
         // when
         Long result = githubService.updateReviewSettings(loginId, dto);
@@ -338,7 +340,8 @@ class GithubServiceTest {
         // given
         String loginId = "non-existent-user";
         ReviewSettingsDto dto = new ReviewSettingsDto(
-                ReviewTone.STRICT, ReviewFocus.IMPROVEMENT_ONLY, DetailLevel.CONCISE, null);
+                ReviewTone.STRICT, ReviewFocus.IMPROVEMENT_ONLY, DetailLevel.CONCISE, null, false,
+                "gpt-4o-mini");
 
         when(githubAccountRepository.findByLoginId(loginId))
                 .thenReturn(Optional.empty());
