@@ -4,6 +4,7 @@ import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -15,6 +16,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import java.security.SecureRandom;
 import java.util.Base64;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
@@ -34,6 +36,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     .ifPresentOrElse(
                             account -> {
                                 account.updateAccessToken(encryptedToken);
+                                log.info("User logged in: {}", loginId);
                             },
                             () -> {
                                 String webhookSecret = generateWebhookSecret();
@@ -44,6 +47,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                                         .build();
                                 githubAccountRepository.save(newAccount);
                                 newAccount.initializeAiSettings();
+                                log.info("New user registered: {}", loginId);
                             });
 
             recordLoginHistory(loginId);

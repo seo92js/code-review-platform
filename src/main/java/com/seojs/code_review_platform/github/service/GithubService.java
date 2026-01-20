@@ -10,6 +10,7 @@ import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
 import com.seojs.code_review_platform.pullrequest.repository.PullRequestRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -26,6 +27,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class GithubService {
@@ -321,6 +323,7 @@ public class GithubService {
             if (!response.getStatusCode().is2xxSuccessful()) {
                 throw new WebhookRegistrationEx("Webhook registration failed: " + response.getStatusCode());
             }
+            log.info("Webhook registered for {}/{}", owner, repository);
         } catch (Exception e) {
             throw new WebhookRegistrationEx("Error occurred during webhook registration", e);
         }
