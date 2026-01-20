@@ -26,6 +26,8 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -94,6 +96,7 @@ public class GithubService {
     /**
      * 사용자의 모든 저장소와 각 저장소의 webhook 등록 상태를 조회 (병렬 처리)
      */
+    @Cacheable(value = "repositories", key = "#accessToken")
     public List<GitRepositoryWithWebhookResponseDto> getRepositoriesWithWebhookStatus(String accessToken) {
         List<GitRepositoryResponseDto> repositories = getRepositories(accessToken);
 
@@ -356,5 +359,13 @@ public class GithubService {
         } catch (Exception e) {
             // 삭제 실패하더라도 등록 시도 (GitHub에서 중복 에러 뱉으면 그때 실패 처리)
         }
+    }
+
+    /**
+     * 저장소 캐시 강제 초기화
+     */
+    @CacheEvict(value = "repositories", key = "#accessToken")
+    public void evictRepositoryCache(String accessToken) {
+        log.info("Evicting repository cache for accessToken: {}", accessToken.substring(0, 5) + "...");
     }
 }

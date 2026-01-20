@@ -27,7 +27,8 @@ public class GithubApiController {
             return false;
         }
 
-        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github", principal.getName());
+        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
+                principal.getName());
         return authorizedClient != null && authorizedClient.getAccessToken() != null;
     }
 
@@ -38,9 +39,21 @@ public class GithubApiController {
 
     @GetMapping("/api/github/repositories")
     public List<GitRepositoryWithWebhookResponseDto> getRepositories(@AuthenticationPrincipal OAuth2User principal) {
-        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github", principal.getName());
+        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
+                principal.getName());
         String accessToken = authorizedClient.getAccessToken().getTokenValue();
         return githubService.getRepositoriesWithWebhookStatus(accessToken);
+    }
+
+    /**
+     * 저장소 목록 캐시 초기화 (새로고침)
+     */
+    @PostMapping("/api/github/repositories/refresh")
+    public void refreshRepositories(@AuthenticationPrincipal OAuth2User principal) {
+        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
+                principal.getName());
+        String accessToken = authorizedClient.getAccessToken().getTokenValue();
+        githubService.evictRepositoryCache(accessToken);
     }
 
     @PostMapping("/api/github/webhook/")
@@ -54,7 +67,8 @@ public class GithubApiController {
 
     @PostMapping("/api/github/register")
     public void registerWebhook(@AuthenticationPrincipal OAuth2User principal, @RequestParam String repository) {
-        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github", principal.getName());
+        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
+                principal.getName());
         String accessToken = authorizedClient.getAccessToken().getTokenValue();
         String owner = principal.getAttribute("login");
 
@@ -81,7 +95,8 @@ public class GithubApiController {
     }
 
     @PatchMapping("/api/github/ignore")
-    public Long updateIgnorePatterns(@AuthenticationPrincipal OAuth2User principal, @RequestBody List<String> patterns) {
+    public Long updateIgnorePatterns(@AuthenticationPrincipal OAuth2User principal,
+            @RequestBody List<String> patterns) {
         String owner = principal.getAttribute("login");
         return githubService.updateIgnorePatterns(owner, patterns);
     }
