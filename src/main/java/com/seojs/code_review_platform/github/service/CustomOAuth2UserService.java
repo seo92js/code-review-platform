@@ -2,12 +2,15 @@ package com.seojs.code_review_platform.github.service;
 
 import com.seojs.code_review_platform.github.entity.GithubAccount;
 import com.seojs.code_review_platform.github.repository.GithubAccountRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.security.SecureRandom;
 import java.util.Base64;
@@ -17,6 +20,7 @@ import java.util.Base64;
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private final GithubAccountRepository githubAccountRepository;
     private final TokenEncryptionService tokenEncryptionService;
+    private final LoginHistoryService loginHistoryService;
 
     @Override
     @Transactional
@@ -41,8 +45,32 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                                 githubAccountRepository.save(newAccount);
                                 newAccount.initializeAiSettings();
                             });
+
+            recordLoginHistory(loginId);
         }
         return oAuth2User;
+    }
+
+    private void recordLoginHistory(String loginId) {
+        String ipAddress = null;
+        String userAgent = null;
+
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs != null) {
+            HttpServletRequest request = attrs.getRequest();
+            ipAddress = getClientIp(request);
+            userAgent = request.getHeader("User-Agent");
+        }
+
+        loginHistoryService.recordLogin(loginId, ipAddress, userAgent);
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 
     /**
