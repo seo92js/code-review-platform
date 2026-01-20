@@ -1,12 +1,14 @@
 package com.seojs.code_review_platform.ai.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class AiService {
@@ -14,6 +16,8 @@ public class AiService {
     public String callAiChat(String apiKey, String systemPrompt, String userPrompt, String model, Double temperature) {
         String actualModel = (model != null) ? model : "gpt-4o-mini";
         double actualTemp = (temperature != null) ? temperature : 0.7;
+
+        log.info("AI review started with model: {}", actualModel);
 
         OpenAiApi userApi = OpenAiApi.builder()
                 .apiKey(apiKey)
@@ -31,11 +35,14 @@ public class AiService {
 
         ChatClient customClient = ChatClient.builder(customModel).build();
 
-        return customClient.prompt()
+        String result = customClient.prompt()
                 .system(systemPrompt)
                 .user(userPrompt)
                 .call()
                 .content();
+
+        log.info("AI review completed");
+        return result;
     }
 
     public boolean validateApiKey(String apiKey) {
