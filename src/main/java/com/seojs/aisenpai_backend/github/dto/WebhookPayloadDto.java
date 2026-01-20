@@ -23,15 +23,16 @@ public class WebhookPayloadDto {
         private final String htmlUrl;
         private final String diffUrl;
     }
-    
+
     @Getter
     @AllArgsConstructor
     public static class RepositoryDto {
+        private final Long id;
         private final String name;
         private final String fullName;
         private final UserDto owner;
     }
-    
+
     @Getter
     @AllArgsConstructor
     public static class UserDto {

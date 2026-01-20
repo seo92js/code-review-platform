@@ -64,12 +64,12 @@ public class PullRequestService {
     }
 
     /**
-     * 특정 저장소의 PR 목록 조회
+     * 특정 저장소의 PR 목록 조회 (repositoryId 기준)
      */
     @Transactional(readOnly = true)
-    public List<PullRequestResponseDto> getPullRequestList(String loginId, String repositoryName) {
+    public List<PullRequestResponseDto> getPullRequestList(Long repositoryId) {
         return pullRequestRepository
-                .findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(loginId, repositoryName).stream()
+                .findByRepositoryIdOrderByUpdatedAtDesc(repositoryId).stream()
                 .map(PullRequestResponseDto::fromEntity)
                 .toList();
     }
@@ -78,30 +78,32 @@ public class PullRequestService {
      * PR 변경된 파일 목록 조회
      */
     @Transactional(readOnly = true)
-    public List<ChangedFileDto> getPullRequestWithChanges(String loginId, String repositoryName, Integer prNumber,
+    public List<ChangedFileDto> getPullRequestWithChanges(Long repositoryId, Integer prNumber,
             String accessToken) {
-        findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId, prNumber);
+        PullRequest pr = findByRepositoryIdAndPrNumberOrThrow(repositoryId, prNumber);
+        String loginId = pr.getGithubAccount().getLoginId();
+        String repositoryName = pr.getRepositoryName();
         return githubService.getChangedFiles(accessToken, loginId, repositoryName, prNumber);
     }
 
     /**
      * 특정 저장소의 특정 PR 번호로 조회 - 존재하지 않으면 예외 발생
      */
-    private PullRequest findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(String repositoryName,
-            String loginId, Integer prNumber) {
+    private PullRequest findByRepositoryIdAndPrNumberOrThrow(Long repositoryId, Integer prNumber) {
         return pullRequestRepository
-                .findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repositoryName, loginId, prNumber)
-                .orElseThrow(() -> new PullRequestNotFoundEx("Pull request not found for repositoryName: "
-                        + repositoryName + ", loginId: " + loginId + ", prNumber: " + prNumber));
+                .findByRepositoryIdAndPrNumber(repositoryId, prNumber)
+                .orElseThrow(() -> new PullRequestNotFoundEx("Pull request not found for repositoryId: "
+                        + repositoryId + ", prNumber: " + prNumber));
     }
 
     /**
      * ai 리뷰 시작
      */
     @Transactional
-    public void review(String loginId, String repositoryName, Integer prNumber, String accessToken, String model) {
-        PullRequest pr = findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId,
-                prNumber);
+    public void review(Long repositoryId, Integer prNumber, String accessToken, String model) {
+        PullRequest pr = findByRepositoryIdAndPrNumberOrThrow(repositoryId, prNumber);
+        String loginId = pr.getGithubAccount().getLoginId();
+        String repositoryName = pr.getRepositoryName();
 
         List<ChangedFileDto> changedFiles = githubService.getChangedFiles(accessToken, loginId, repositoryName,
                 prNumber);
@@ -131,17 +133,16 @@ public class PullRequestService {
         pr.updateStatus(ReviewStatus.IN_PROGRESS);
 
         // LLM 호출은 이벤트 리스너에서 수행
-        eventPublisher.publishEvent(new ReviewRequestDto(loginId, repositoryName, prNumber, filteredFiles, model));
+        eventPublisher.publishEvent(new ReviewRequestDto(repositoryId, prNumber, filteredFiles, model));
     }
 
     /**
      * ai 리뷰 결과 업데이트
      */
     @Transactional
-    public void updateAiReview(String repositoryName, String loginId, Integer prNumber, String aiReview,
+    public void updateAiReview(Long repositoryId, Integer prNumber, String aiReview,
             ReviewStatus status) {
-        PullRequest pr = findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId,
-                prNumber);
+        PullRequest pr = findByRepositoryIdAndPrNumberOrThrow(repositoryId, prNumber);
         pr.updateAiReview(aiReview);
         pr.updateStatus(status);
     }
@@ -150,9 +151,8 @@ public class PullRequestService {
      * ai 리뷰 결과 조회
      */
     @Transactional(readOnly = true)
-    public String getAiReview(String loginId, String repositoryName, Integer prNumber) {
-        PullRequest pr = findByRepositoryNameAndGithubAccountLoginIdAndPrNumberOrThrow(repositoryName, loginId,
-                prNumber);
+    public String getAiReview(Long repositoryId, Integer prNumber) {
+        PullRequest pr = findByRepositoryIdAndPrNumberOrThrow(repositoryId, prNumber);
         return pr.getAiReview();
     }
 
@@ -167,6 +167,7 @@ public class PullRequestService {
      * PR 정보를 데이터베이스에 저장
      */
     private void savePullRequest(WebhookPayloadDto webhookPayload) {
+        Long repoId = webhookPayload.getRepository().getId();
         String repoName = webhookPayload.getRepository().getName();
         String loginId = webhookPayload.getRepository().getOwner().getLogin();
         Integer prNumber = webhookPayload.getPullRequest().getNumber();
@@ -174,13 +175,13 @@ public class PullRequestService {
         String title = webhookPayload.getPullRequest().getTitle();
 
         PullRequest existingPr = pullRequestRepository
-                .findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(repoName, loginId, prNumber)
+                .findByRepositoryIdAndPrNumber(repoId, prNumber)
                 .orElse(null);
 
         if (existingPr != null) {
             updateExistingPullRequest(existingPr, action);
         } else {
-            createNewPullRequest(repoName, loginId, prNumber, action, title);
+            createNewPullRequest(repoId, repoName, loginId, prNumber, action, title);
         }
     }
 
@@ -237,10 +238,12 @@ public class PullRequestService {
     /**
      * 새 PR 생성
      */
-    private void createNewPullRequest(String repoName, String loginId, Integer prNumber, String action, String title) {
+    private void createNewPullRequest(Long repoId, String repoName, String loginId, Integer prNumber, String action,
+            String title) {
         GithubAccount githubAccount = githubService.findByLoginIdOrThrow(loginId);
 
         PullRequest newPr = PullRequest.builder()
+                .repositoryId(repoId)
                 .repositoryName(repoName)
                 .githubAccount(githubAccount)
                 .prNumber(prNumber)
@@ -255,7 +258,7 @@ public class PullRequestService {
             try {
                 String accessToken = tokenEncryptionService.decryptToken(githubAccount.getAccessToken());
                 String model = githubAccount.getAiSettings().getOpenaiModel();
-                review(loginId, repoName, prNumber, accessToken, model);
+                review(repoId, prNumber, accessToken, model);
                 log.info("Auto review triggered for PR #{} in {}/{}", prNumber, loginId, repoName);
             } catch (Exception e) {
                 log.warn("Auto review failed for PR #{} in {}/{}: {}", prNumber, loginId, repoName, e.getMessage());

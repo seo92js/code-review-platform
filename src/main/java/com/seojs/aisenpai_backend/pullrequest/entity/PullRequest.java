@@ -21,6 +21,9 @@ public class PullRequest {
     private Integer prNumber;
 
     @Column(nullable = false)
+    private Long repositoryId;
+
+    @Column(nullable = false)
     private String repositoryName;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -82,9 +85,11 @@ public class PullRequest {
     }
 
     @Builder
-    public PullRequest(Integer prNumber, String repositoryName, GithubAccount githubAccount, String title,
+    public PullRequest(Integer prNumber, Long repositoryId, String repositoryName, GithubAccount githubAccount,
+            String title,
             String action, ReviewStatus status) {
         this.prNumber = prNumber;
+        this.repositoryId = repositoryId;
         this.repositoryName = repositoryName;
         this.githubAccount = githubAccount;
         this.title = title;

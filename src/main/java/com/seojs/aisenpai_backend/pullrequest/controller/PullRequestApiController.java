@@ -22,32 +22,32 @@ public class PullRequestApiController {
     private final OAuth2AuthorizedClientService authorizedClientService;
 
     @GetMapping("/api/pull-requests")
-    public List<PullRequestResponseDto> getPullRequestList(@AuthenticationPrincipal OAuth2User principal, @RequestParam String repositoryName) {
-        String loginId = principal.getAttribute("login");
-        return pullRequestService.getPullRequestList(loginId, repositoryName);
+    public List<PullRequestResponseDto> getPullRequestList(@RequestParam Long repositoryId) {
+        return pullRequestService.getPullRequestList(repositoryId);
     }
 
     @GetMapping("/api/pull-request/changes")
-    public List<ChangedFileDto> getPullRequestWithChanges(@AuthenticationPrincipal OAuth2User principal, @RequestParam String repository, @RequestParam Integer prNumber) {
-        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github", principal.getName());
+    public List<ChangedFileDto> getPullRequestWithChanges(@AuthenticationPrincipal OAuth2User principal,
+            @RequestParam Long repositoryId, @RequestParam Integer prNumber) {
+        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
+                principal.getName());
         String accessToken = authorizedClient.getAccessToken().getTokenValue();
-        String loginId = principal.getAttribute("login");
 
-        return pullRequestService.getPullRequestWithChanges(loginId, repository, prNumber, accessToken);
+        return pullRequestService.getPullRequestWithChanges(repositoryId, prNumber, accessToken);
     }
 
     @PostMapping("/api/pull-request/review")
-    public void reviewPullRequest(@AuthenticationPrincipal OAuth2User principal, @RequestParam String repository, @RequestParam Integer prNumber, @RequestParam(required = false) String model) {
-        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github", principal.getName());
+    public void reviewPullRequest(@AuthenticationPrincipal OAuth2User principal, @RequestParam Long repositoryId,
+            @RequestParam Integer prNumber, @RequestParam(required = false) String model) {
+        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
+                principal.getName());
         String accessToken = authorizedClient.getAccessToken().getTokenValue();
-        String loginId = principal.getAttribute("login");
 
-        pullRequestService.review(loginId, repository, prNumber, accessToken, model);
+        pullRequestService.review(repositoryId, prNumber, accessToken, model);
     }
 
     @GetMapping("/api/pull-request/review")
-    public String getPullRequestReview(@AuthenticationPrincipal OAuth2User principal, @RequestParam String repository, @RequestParam Integer prNumber) {
-        String loginId = principal.getAttribute("login");
-        return pullRequestService.getAiReview(loginId, repository, prNumber);
+    public String getPullRequestReview(@RequestParam Long repositoryId, @RequestParam Integer prNumber) {
+        return pullRequestService.getAiReview(repositoryId, prNumber);
     }
 }

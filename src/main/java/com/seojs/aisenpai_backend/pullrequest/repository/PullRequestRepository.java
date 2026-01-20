@@ -11,12 +11,12 @@ import java.util.Optional;
 public interface PullRequestRepository extends JpaRepository<PullRequest, Long>, PullRequestRepositoryCustom {
 
     /**
-     * 특정 저장소의 특정 PR 번호로 조회
+     * 특정 저장소의 특정 PR 번호로 조회 (repositoryId 기준)
      */
-    Optional<PullRequest> findByRepositoryNameAndGithubAccountLoginIdAndPrNumber(String repositoryName, String loginId, Integer prNumber);
+    Optional<PullRequest> findByRepositoryIdAndPrNumber(Long repositoryId, Integer prNumber);
 
     /**
-     * 특정 저장소의 모든 PR 조회
+     * 특정 저장소의 모든 PR 조회 (repositoryId 기준)
      */
-    List<PullRequest> findByGithubAccountLoginIdAndRepositoryNameOrderByUpdatedAtDesc(String loginId, String repositoryName);
-} 
+    List<PullRequest> findByRepositoryIdOrderByUpdatedAtDesc(Long repositoryId);
+}

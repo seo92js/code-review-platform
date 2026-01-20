@@ -11,8 +11,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ReviewRequestDto {
-    private String loginId;
-    private String repositoryName;
+    private Long repositoryId;
     private Integer prNumber;
     private List<ChangedFileDto> changedFiles;
     private String model;

@@ -106,8 +106,7 @@ public class GithubService {
         List<CompletableFuture<GitRepositoryWithWebhookResponseDto>> futures = repositories.stream()
                 .map(repo -> CompletableFuture.supplyAsync(() -> {
                     boolean hasWebhook = isWebhook(accessToken, repo.getOwner(), repo.getName());
-                    boolean existsOpenPr = pullRequestRepository.existsOpenPrByLoginIdAndRepositoryName(repo.getOwner(),
-                            repo.getName());
+                    boolean existsOpenPr = pullRequestRepository.existsOpenPrByRepositoryId(repo.getId());
 
                     return GitRepositoryWithWebhookResponseDto.builder()
                             .repository(repo)
