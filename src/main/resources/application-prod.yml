@@ -6,7 +6,7 @@ spring:
     activate:
       on-profile: prod
   application:
-    name: code-review-platform
+    name: aisenpai-backend
   datasource:
     url: jdbc:postgresql://db:5432/codereview
     username: ${DB_USERNAME}
