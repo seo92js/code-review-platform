@@ -55,7 +55,6 @@
         <!-- ACCESS_LOG 로거 설정 (Prod) -->
         <logger name="ACCESS_LOG" level="INFO" additivity="false">
             <appender-ref ref="ACCESS_FILE"/>
-            <appender-ref ref="MAIN_FILE"/>
             <appender-ref ref="CONSOLE"/>
         </logger>
 
