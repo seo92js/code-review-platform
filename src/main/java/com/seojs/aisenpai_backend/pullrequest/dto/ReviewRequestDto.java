@@ -15,4 +15,6 @@ public class ReviewRequestDto {
     private Integer prNumber;
     private List<ChangedFileDto> changedFiles;
     private String model;
+    private String systemPrompt;
+    private String encryptedOpenAiKey;
 }
