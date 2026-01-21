@@ -133,7 +133,10 @@ public class PullRequestService {
         pr.updateStatus(ReviewStatus.IN_PROGRESS);
 
         // LLM 호출은 이벤트 리스너에서 수행
-        eventPublisher.publishEvent(new ReviewRequestDto(repositoryId, prNumber, filteredFiles, model));
+        String systemPrompt = githubAccount.getAiSettings().buildSystemPrompt();
+        String encryptedOpenAiKey = githubAccount.getAiSettings().getOpenAiKey();
+        eventPublisher.publishEvent(
+                new ReviewRequestDto(repositoryId, prNumber, filteredFiles, model, systemPrompt, encryptedOpenAiKey));
     }
 
     /**

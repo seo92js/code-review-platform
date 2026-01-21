@@ -6,9 +6,7 @@ import com.seojs.aisenpai_backend.ai.service.AiService;
 import com.seojs.aisenpai_backend.github.dto.ChangedFileDto;
 import com.seojs.aisenpai_backend.github.service.TokenEncryptionService;
 import com.seojs.aisenpai_backend.pullrequest.dto.ReviewRequestDto;
-import com.seojs.aisenpai_backend.pullrequest.entity.PullRequest;
 import com.seojs.aisenpai_backend.pullrequest.entity.PullRequest.ReviewStatus;
-import com.seojs.aisenpai_backend.pullrequest.repository.PullRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -26,7 +24,6 @@ public class PullRequestReviewListener {
     private final AiService aiService;
     private final ObjectMapper objectMapper;
     private final PullRequestService pullRequestService;
-    private final PullRequestRepository pullRequestRepository;
     private final TokenEncryptionService tokenEncryptionService;
 
     @Async
@@ -37,16 +34,8 @@ public class PullRequestReviewListener {
         Integer prNumber = dto.getPrNumber();
         String model = dto.getModel();
 
-        PullRequest pr = pullRequestRepository.findByRepositoryIdAndPrNumber(repositoryId, prNumber)
-                .orElse(null);
-
-        if (pr == null) {
-            log.error("PR not found - repositoryId: {}, prNumber: {}", repositoryId, prNumber);
-            return;
-        }
-
-        String systemPrompt = pr.getGithubAccount().getAiSettings().buildSystemPrompt();
-        String encryptedKey = pr.getGithubAccount().getAiSettings().getOpenAiKey();
+        String systemPrompt = dto.getSystemPrompt();
+        String encryptedKey = dto.getEncryptedOpenAiKey();
         String openApiKey = tokenEncryptionService.decryptToken(encryptedKey);
 
         try {
