@@ -73,4 +73,19 @@ public class NotificationService {
     public void markAllAsRead(String loginId) {
         notificationRepository.markAllAsRead(loginId);
     }
+
+    /**
+     * 단일 알림 읽음 처리
+     */
+    @Transactional
+    public void markAsRead(Long notificationId, String loginId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new IllegalArgumentException("Notification not found: " + notificationId));
+
+        if (!notification.getGithubAccount().getLoginId().equals(loginId)) {
+            throw new IllegalArgumentException("Access denied");
+        }
+
+        notification.markAsRead();
+    }
 }

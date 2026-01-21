@@ -27,4 +27,10 @@ public class NotificationController {
         String loginId = principal.getAttribute("login");
         notificationService.markAllAsRead(loginId);
     }
+
+    @PutMapping("/{id}/read")
+    public void markAsRead(@PathVariable Long id, @AuthenticationPrincipal OAuth2User principal) {
+        String loginId = principal.getAttribute("login");
+        notificationService.markAsRead(id, loginId);
+    }
 }
