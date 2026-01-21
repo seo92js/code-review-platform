@@ -10,6 +10,8 @@ import com.seojs.aisenpai_backend.github.entity.GithubAccount;
 import com.seojs.aisenpai_backend.github.service.GithubService;
 import com.seojs.aisenpai_backend.github.service.TokenEncryptionService;
 import com.seojs.aisenpai_backend.github.service.WebhookSecurityService;
+import com.seojs.aisenpai_backend.notification.entity.NotificationType;
+import com.seojs.aisenpai_backend.notification.service.NotificationService;
 import com.seojs.aisenpai_backend.pullrequest.dto.PullRequestResponseDto;
 import com.seojs.aisenpai_backend.pullrequest.dto.ReviewRequestDto;
 import com.seojs.aisenpai_backend.pullrequest.entity.PullRequest;
@@ -36,6 +38,7 @@ public class PullRequestService {
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
     private final TokenEncryptionService tokenEncryptionService;
+    private final NotificationService notificationService;
 
     /**
      * PR 웹훅 이벤트를 처리하고 데이터베이스에 저장
@@ -148,6 +151,18 @@ public class PullRequestService {
         PullRequest pr = findByRepositoryIdAndPrNumberOrThrow(repositoryId, prNumber);
         pr.updateAiReview(aiReview);
         pr.updateStatus(status);
+
+        if (status == ReviewStatus.COMPLETED) {
+            notificationService.createNotification(
+                    pr.getGithubAccount(),
+                    NotificationType.REVIEW_COMPLETE,
+                    pr);
+        } else if (status == ReviewStatus.FAILED) {
+            notificationService.createNotification(
+                    pr.getGithubAccount(),
+                    NotificationType.REVIEW_FAILED,
+                    pr);
+        }
     }
 
     /**
@@ -256,6 +271,11 @@ public class PullRequestService {
                 .build();
 
         pullRequestRepository.save(newPr);
+
+        notificationService.createNotification(
+                githubAccount,
+                NotificationType.NEW_PR,
+                newPr);
 
         if (Boolean.TRUE.equals(githubAccount.getAiSettings().getAutoReviewEnabled())) {
             try {
