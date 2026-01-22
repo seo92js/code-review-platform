@@ -29,7 +29,8 @@ public class NotificationRepositoryImpl implements NotificationRepositoryCustom 
         return queryFactory.selectFrom(notification)
                 .join(notification.githubAccount).fetchJoin()
                 .leftJoin(notification.pullRequest).fetchJoin()
-                .where(notification.githubAccount.loginId.eq(loginId))
+                .where(notification.githubAccount.loginId.eq(loginId)
+                        .and(notification.isRead.isFalse()))
                 .orderBy(notification.createdAt.desc())
                 .fetch();
     }

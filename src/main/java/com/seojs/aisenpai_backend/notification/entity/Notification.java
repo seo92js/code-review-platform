@@ -6,14 +6,11 @@ import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor
-@EntityListeners(AuditingEntityListener.class)
 @Entity
 public class Notification {
     @Id
@@ -35,8 +32,13 @@ public class Notification {
     @Column(nullable = false)
     private boolean isRead = false;
 
-    @CreatedDate
+    @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 
     @Builder
     public Notification(GithubAccount githubAccount, NotificationType type, PullRequest pullRequest) {
