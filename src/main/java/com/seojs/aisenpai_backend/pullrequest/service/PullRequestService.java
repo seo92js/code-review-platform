@@ -67,10 +67,11 @@ public class PullRequestService {
     }
 
     /**
-     * 특정 저장소의 PR 목록 조회 (repositoryId 기준)
+     * 특정 저장소의 PR 목록 조회 (owner/repo 기준 - GitHub API로 repositoryId 조회 후 사용)
      */
     @Transactional(readOnly = true)
-    public List<PullRequestResponseDto> getPullRequestList(Long repositoryId) {
+    public List<PullRequestResponseDto> getPullRequestList(String owner, String repo, String accessToken) {
+        Long repositoryId = githubService.getRepositoryId(accessToken, owner, repo);
         return pullRequestRepository
                 .findByRepositoryIdOrderByUpdatedAtDesc(repositoryId).stream()
                 .map(PullRequestResponseDto::fromEntity)
@@ -78,15 +79,14 @@ public class PullRequestService {
     }
 
     /**
-     * PR 변경된 파일 목록 조회
+     * PR 변경된 파일 목록 조회 (owner/repo 기준 - GitHub API로 repositoryId 조회 후 사용)
      */
     @Transactional(readOnly = true)
-    public List<ChangedFileDto> getPullRequestWithChanges(Long repositoryId, Integer prNumber,
+    public List<ChangedFileDto> getPullRequestWithChanges(String owner, String repo, Integer prNumber,
             String accessToken) {
+        Long repositoryId = githubService.getRepositoryId(accessToken, owner, repo);
         PullRequest pr = findByRepositoryIdAndPrNumberOrThrow(repositoryId, prNumber);
-        String loginId = pr.getGithubAccount().getLoginId();
-        String repositoryName = pr.getRepositoryName();
-        return githubService.getChangedFiles(accessToken, loginId, repositoryName, prNumber);
+        return githubService.getChangedFiles(accessToken, owner, repo, prNumber);
     }
 
     /**
@@ -103,13 +103,11 @@ public class PullRequestService {
      * ai 리뷰 시작
      */
     @Transactional
-    public void review(Long repositoryId, Integer prNumber, String accessToken, String model) {
+    public void review(String owner, String repo, Integer prNumber, String accessToken, String model) {
+        Long repositoryId = githubService.getRepositoryId(accessToken, owner, repo);
         PullRequest pr = findByRepositoryIdAndPrNumberOrThrow(repositoryId, prNumber);
-        String loginId = pr.getGithubAccount().getLoginId();
-        String repositoryName = pr.getRepositoryName();
 
-        List<ChangedFileDto> changedFiles = githubService.getChangedFiles(accessToken, loginId, repositoryName,
-                prNumber);
+        List<ChangedFileDto> changedFiles = githubService.getChangedFiles(accessToken, owner, repo, prNumber);
 
         GithubAccount githubAccount = pr.getGithubAccount();
 
@@ -169,7 +167,8 @@ public class PullRequestService {
      * ai 리뷰 결과 조회
      */
     @Transactional(readOnly = true)
-    public String getAiReview(Long repositoryId, Integer prNumber) {
+    public String getAiReview(String owner, String repo, Integer prNumber, String accessToken) {
+        Long repositoryId = githubService.getRepositoryId(accessToken, owner, repo);
         PullRequest pr = findByRepositoryIdAndPrNumberOrThrow(repositoryId, prNumber);
         return pr.getAiReview();
     }
@@ -281,7 +280,7 @@ public class PullRequestService {
             try {
                 String accessToken = tokenEncryptionService.decryptToken(githubAccount.getAccessToken());
                 String model = githubAccount.getAiSettings().getOpenaiModel();
-                review(repoId, prNumber, accessToken, model);
+                review(loginId, repoName, prNumber, accessToken, model);
                 log.info("Auto review triggered for PR #{} in {}/{}", prNumber, loginId, repoName);
             } catch (Exception e) {
                 log.warn("Auto review failed for PR #{} in {}/{}: {}", prNumber, loginId, repoName, e.getMessage());

@@ -66,46 +66,38 @@ class PullRequestServiceTest {
     void getPullRequestList_Success() {
         // given
         Long repositoryId = 1L;
-        String loginId = "test-owner";
-        String repositoryName = "test-repo";
-
-        GithubAccount githubAccount = GithubAccount.builder()
-                .loginId(loginId)
-                .accessToken("test-token")
-                .build();
+        String owner = "test-owner";
+        String repo = "test-repo";
+        String accessToken = "test-token";
 
         PullRequest pr1 = PullRequest.builder()
                 .prNumber(1)
                 .repositoryId(repositoryId)
-                .repositoryName(repositoryName)
-                .githubAccount(githubAccount)
                 .title("PR 1")
-                .action("opened")
                 .status(PullRequest.ReviewStatus.PENDING)
                 .build();
 
         PullRequest pr2 = PullRequest.builder()
                 .prNumber(2)
                 .repositoryId(repositoryId)
-                .repositoryName(repositoryName)
-                .githubAccount(githubAccount)
                 .title("PR 2")
-                .action("synchronize")
                 .status(PullRequest.ReviewStatus.COMPLETED)
                 .build();
 
         List<PullRequest> pullRequests = Arrays.asList(pr1, pr2);
 
+        when(githubService.getRepositoryId(accessToken, owner, repo)).thenReturn(repositoryId);
         when(pullRequestRepository.findByRepositoryIdOrderByUpdatedAtDesc(repositoryId))
                 .thenReturn(pullRequests);
 
         // when
-        List<PullRequestResponseDto> result = pullRequestService.getPullRequestList(repositoryId);
+        List<PullRequestResponseDto> result = pullRequestService.getPullRequestList(owner, repo, accessToken);
 
         // then
         assertEquals(2, result.size());
         assertEquals(1, result.get(0).getPrNumber());
         assertEquals(2, result.get(1).getPrNumber());
+        verify(githubService).getRepositoryId(accessToken, owner, repo);
         verify(pullRequestRepository).findByRepositoryIdOrderByUpdatedAtDesc(repositoryId);
     }
 
@@ -115,33 +107,29 @@ class PullRequestServiceTest {
         Long repositoryId = 1L;
         Integer prNumber = 123;
         String accessToken = "test-access-token";
-        String loginId = "test-owner";
-        String repositoryName = "test-repo";
-
-        GithubAccount githubAccount = GithubAccount.builder()
-                .loginId(loginId)
-                .accessToken(accessToken)
-                .build();
+        String owner = "test-owner";
+        String repo = "test-repo";
 
         PullRequest pullRequest = PullRequest.builder()
                 .repositoryId(repositoryId)
                 .prNumber(prNumber)
-                .repositoryName(repositoryName)
-                .githubAccount(githubAccount)
+                .repositoryName(repo)
                 .build();
 
+        when(githubService.getRepositoryId(accessToken, owner, repo)).thenReturn(repositoryId);
         when(pullRequestRepository.findByRepositoryIdAndPrNumber(repositoryId, prNumber))
                 .thenReturn(Optional.of(pullRequest));
 
-        when(githubService.getChangedFiles(accessToken, loginId, repositoryName, prNumber))
+        when(githubService.getChangedFiles(accessToken, owner, repo, prNumber))
                 .thenReturn(Collections.emptyList());
 
         // when
-        pullRequestService.getPullRequestWithChanges(repositoryId, prNumber, accessToken);
+        pullRequestService.getPullRequestWithChanges(owner, repo, prNumber, accessToken);
 
         // then
+        verify(githubService).getRepositoryId(accessToken, owner, repo);
         verify(pullRequestRepository).findByRepositoryIdAndPrNumber(repositoryId, prNumber);
-        verify(githubService).getChangedFiles(accessToken, loginId, repositoryName, prNumber);
+        verify(githubService).getChangedFiles(accessToken, owner, repo, prNumber);
     }
 
     @Test
