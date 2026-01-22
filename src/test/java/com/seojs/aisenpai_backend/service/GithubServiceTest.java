@@ -359,16 +359,19 @@ class GithubServiceTest {
         String accessToken = "test-token";
 
         GitRepositoryResponseDto repo1 = new GitRepositoryResponseDto();
+        ReflectionTestUtils.setField(repo1, "id", 1L);
         ReflectionTestUtils.setField(repo1, "name", "repo1");
         ReflectionTestUtils.setField(repo1, "owner", "owner");
         ReflectionTestUtils.setField(repo1, "updatedAt", "2024-01-01T00:00:00Z");
 
         GitRepositoryResponseDto repo2 = new GitRepositoryResponseDto();
+        ReflectionTestUtils.setField(repo2, "id", 2L);
         ReflectionTestUtils.setField(repo2, "name", "repo2");
         ReflectionTestUtils.setField(repo2, "owner", "owner");
         ReflectionTestUtils.setField(repo2, "updatedAt", "2024-01-02T00:00:00Z");
 
         GitRepositoryResponseDto repo3 = new GitRepositoryResponseDto();
+        ReflectionTestUtils.setField(repo3, "id", 3L);
         ReflectionTestUtils.setField(repo3, "name", "repo3");
         ReflectionTestUtils.setField(repo3, "owner", "owner");
         ReflectionTestUtils.setField(repo3, "updatedAt", "2024-01-03T00:00:00Z");
@@ -389,9 +392,9 @@ class GithubServiceTest {
                 any(ParameterizedTypeReference.class)))
                 .thenReturn(new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK));
 
-        when(pullRequestRepository.existsOpenPrByLoginIdAndRepositoryName("owner", "repo1")).thenReturn(false);
-        when(pullRequestRepository.existsOpenPrByLoginIdAndRepositoryName("owner", "repo2")).thenReturn(true);
-        when(pullRequestRepository.existsOpenPrByLoginIdAndRepositoryName("owner", "repo3")).thenReturn(true);
+        when(pullRequestRepository.existsOpenPrByRepositoryId(1L)).thenReturn(false);
+        when(pullRequestRepository.existsOpenPrByRepositoryId(2L)).thenReturn(true);
+        when(pullRequestRepository.existsOpenPrByRepositoryId(3L)).thenReturn(true);
 
         // when
         var result = githubService.getRepositoriesWithWebhookStatus(accessToken);

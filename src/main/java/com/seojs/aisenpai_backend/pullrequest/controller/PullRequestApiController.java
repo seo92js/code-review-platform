@@ -8,10 +8,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -21,33 +18,55 @@ public class PullRequestApiController {
     private final PullRequestService pullRequestService;
     private final OAuth2AuthorizedClientService authorizedClientService;
 
-    @GetMapping("/api/pull-requests")
-    public List<PullRequestResponseDto> getPullRequestList(@RequestParam Long repositoryId) {
-        return pullRequestService.getPullRequestList(repositoryId);
-    }
-
-    @GetMapping("/api/pull-request/changes")
-    public List<ChangedFileDto> getPullRequestWithChanges(@AuthenticationPrincipal OAuth2User principal,
-            @RequestParam Long repositoryId, @RequestParam Integer prNumber) {
+    @GetMapping("/api/pull-request/{owner}/{repo}")
+    public List<PullRequestResponseDto> getPullRequestList(
+            @AuthenticationPrincipal OAuth2User principal,
+            @PathVariable String owner,
+            @PathVariable String repo) {
         OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
                 principal.getName());
         String accessToken = authorizedClient.getAccessToken().getTokenValue();
 
-        return pullRequestService.getPullRequestWithChanges(repositoryId, prNumber, accessToken);
+        return pullRequestService.getPullRequestList(owner, repo, accessToken);
     }
 
-    @PostMapping("/api/pull-request/review")
-    public void reviewPullRequest(@AuthenticationPrincipal OAuth2User principal, @RequestParam Long repositoryId,
-            @RequestParam Integer prNumber, @RequestParam(required = false) String model) {
+    @GetMapping("/api/pull-request/{owner}/{repo}/{prNumber}/changes")
+    public List<ChangedFileDto> getPullRequestWithChanges(
+            @AuthenticationPrincipal OAuth2User principal,
+            @PathVariable String owner,
+            @PathVariable String repo,
+            @PathVariable Integer prNumber) {
         OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
                 principal.getName());
         String accessToken = authorizedClient.getAccessToken().getTokenValue();
 
-        pullRequestService.review(repositoryId, prNumber, accessToken, model);
+        return pullRequestService.getPullRequestWithChanges(owner, repo, prNumber, accessToken);
     }
 
-    @GetMapping("/api/pull-request/review")
-    public String getPullRequestReview(@RequestParam Long repositoryId, @RequestParam Integer prNumber) {
-        return pullRequestService.getAiReview(repositoryId, prNumber);
+    @PostMapping("/api/pull-request/{owner}/{repo}/{prNumber}/review")
+    public void reviewPullRequest(
+            @AuthenticationPrincipal OAuth2User principal,
+            @PathVariable String owner,
+            @PathVariable String repo,
+            @PathVariable Integer prNumber,
+            @RequestParam(required = false) String model) {
+        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
+                principal.getName());
+        String accessToken = authorizedClient.getAccessToken().getTokenValue();
+
+        pullRequestService.review(owner, repo, prNumber, accessToken, model);
+    }
+
+    @GetMapping("/api/pull-request/{owner}/{repo}/{prNumber}/review")
+    public String getPullRequestReview(
+            @AuthenticationPrincipal OAuth2User principal,
+            @PathVariable String owner,
+            @PathVariable String repo,
+            @PathVariable Integer prNumber) {
+        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
+                principal.getName());
+        String accessToken = authorizedClient.getAccessToken().getTokenValue();
+
+        return pullRequestService.getAiReview(owner, repo, prNumber, accessToken);
     }
 }

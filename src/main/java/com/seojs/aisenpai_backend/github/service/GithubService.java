@@ -68,6 +68,29 @@ public class GithubService {
     }
 
     /**
+     * 특정 저장소의 ID를 GitHub API로 조회
+     */
+    public Long getRepositoryId(String accessToken, String owner, String repo) {
+        String url = String.format("https://api.github.com/repos/%s/%s", owner, repo);
+
+        HttpHeaders headers = createAuthHeaders(accessToken);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<GitRepositoryResponseDto> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    GitRepositoryResponseDto.class);
+
+            GitRepositoryResponseDto repository = response.getBody();
+            return repository != null ? repository.getId() : null;
+        } catch (Exception e) {
+            throw new GitHubApiEx("Failed to get repository: " + owner + "/" + repo, e);
+        }
+    }
+
+    /**
      * 특정 저장소에 지정된 webhook이 등록되어 있는지 확인
      */
     public boolean isWebhook(String accessToken, String owner, String repo) {
