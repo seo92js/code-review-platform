@@ -194,6 +194,7 @@ public class GithubService {
                 settings.getDetailLevel(),
                 settings.getCustomInstructions(),
                 settings.getAutoReviewEnabled(),
+                settings.getAutoPostToGithub(),
                 settings.getOpenaiModel());
     }
 
@@ -238,7 +239,8 @@ public class GithubService {
     public Long updateReviewSettings(String loginId, ReviewSettingsDto dto) {
         GithubAccount account = findByLoginIdOrThrow(loginId);
         account.getAiSettings().updateReviewSettings(dto.getTone(), dto.getFocus(), dto.getDetailLevel(),
-                dto.getCustomInstructions(), dto.getAutoReviewEnabled(), dto.getOpenaiModel());
+                dto.getCustomInstructions(), dto.getAutoReviewEnabled(), dto.getAutoPostToGithub(),
+                dto.getOpenaiModel());
         return account.getId();
     }
 
@@ -298,6 +300,29 @@ public class GithubService {
 
         } catch (Exception e) {
             throw new GitHubApiEx("Failed to get changed files", e);
+        }
+    }
+
+    /**
+     * Github PR에 댓글 게시
+     */
+    public void postPRComment(String accessToken, String owner, String repo, int prNumber, String body) {
+        String url = String.format("https://api.github.com/repos/%s/%s/issues/%d/comments", owner, repo, prNumber);
+
+        HttpHeaders headers = createAuthHeaders(accessToken);
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+        Map<String, String> requestBody = new HashMap<>();
+        requestBody.put("body", body);
+
+        HttpEntity<Map<String, String>> entity = new HttpEntity<>(requestBody, headers);
+
+        try {
+            restTemplate.postForEntity(url, entity, String.class);
+            log.info("Posted review comment to PR #{} in {}/{}", prNumber, owner, repo);
+        } catch (Exception e) {
+            log.error("Failed to post comment to PR #{} in {}/{}: {}", prNumber, owner, repo, e.getMessage());
+            throw new GitHubApiEx("Failed to post PR comment", e);
         }
     }
 

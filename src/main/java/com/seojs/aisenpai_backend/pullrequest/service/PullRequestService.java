@@ -150,17 +150,39 @@ public class PullRequestService {
         pr.updateAiReview(aiReview);
         pr.updateStatus(status);
 
+        GithubAccount account = pr.getGithubAccount();
+
         if (status == ReviewStatus.COMPLETED) {
             notificationService.createNotification(
-                    pr.getGithubAccount(),
+                    account,
                     NotificationType.REVIEW_COMPLETE,
                     pr);
+
+            // GitHub PR에 댓글 자동 게시
+            if (Boolean.TRUE.equals(account.getAiSettings().getAutoPostToGithub())) {
+                try {
+                    String accessToken = tokenEncryptionService.decryptToken(account.getAccessToken());
+                    String formattedReview = formatReviewForGithub(aiReview);
+                    githubService.postPRComment(accessToken, account.getLoginId(), pr.getRepositoryName(), prNumber,
+                            formattedReview);
+                } catch (Exception e) {
+                    log.warn("Failed to post review to GitHub PR #{}: {}", prNumber, e.getMessage());
+                }
+            }
         } else if (status == ReviewStatus.FAILED) {
             notificationService.createNotification(
-                    pr.getGithubAccount(),
+                    account,
                     NotificationType.REVIEW_FAILED,
                     pr);
         }
+    }
+
+    /**
+     * GitHub 댓글용 리뷰 포맷팅
+     */
+    private String formatReviewForGithub(String aiReview) {
+        return "## 🤖 AI Code Review by AISenpai\n\n" + aiReview
+                + "\n\n---\n*Powered by [AISenpai](https://aisenpai.dev)*";
     }
 
     /**

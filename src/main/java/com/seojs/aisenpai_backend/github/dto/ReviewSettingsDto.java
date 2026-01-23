@@ -16,5 +16,6 @@ public class ReviewSettingsDto {
     private DetailLevel detailLevel;
     private String customInstructions;
     private Boolean autoReviewEnabled;
+    private Boolean autoPostToGithub;
     private String openaiModel;
 }
