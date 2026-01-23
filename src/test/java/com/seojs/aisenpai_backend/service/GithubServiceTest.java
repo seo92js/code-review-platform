@@ -321,6 +321,7 @@ class GithubServiceTest {
                 DetailLevel.DETAILED,
                 "보안에 집중해주세요",
                 true,
+                false,
                 "gpt-4o-mini");
 
         // when
@@ -341,6 +342,7 @@ class GithubServiceTest {
         String loginId = "non-existent-user";
         ReviewSettingsDto dto = new ReviewSettingsDto(
                 ReviewTone.STRICT, ReviewFocus.IMPROVEMENT_ONLY, DetailLevel.CONCISE, null, false,
+                false,
                 "gpt-4o-mini");
 
         when(githubAccountRepository.findByLoginId(loginId))

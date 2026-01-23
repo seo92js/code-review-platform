@@ -44,6 +44,9 @@ public class AiReviewSettings {
     private Boolean autoReviewEnabled = false;
 
     @Column(nullable = false)
+    private Boolean autoPostToGithub = false;
+
+    @Column(nullable = false)
     private String openaiModel = "gpt-4o-mini";
 
     @Builder
@@ -53,17 +56,19 @@ public class AiReviewSettings {
         this.reviewFocus = ReviewFocus.BOTH;
         this.detailLevel = DetailLevel.STANDARD;
         this.autoReviewEnabled = false;
+        this.autoPostToGithub = false;
         this.openaiModel = "gpt-4o-mini";
         this.ignorePatterns = "package-lock.json, yarn.lock, *.lock, .env*, *.pem, *.key, .yml, .yaml";
     }
 
     public void updateReviewSettings(ReviewTone tone, ReviewFocus focus, DetailLevel detailLevel,
-            String customInstructions, Boolean autoReviewEnabled, String openaiModel) {
+            String customInstructions, Boolean autoReviewEnabled, Boolean autoPostToGithub, String openaiModel) {
         this.reviewTone = tone;
         this.reviewFocus = focus;
         this.detailLevel = detailLevel;
         this.customInstructions = customInstructions;
         this.autoReviewEnabled = autoReviewEnabled != null ? autoReviewEnabled : false;
+        this.autoPostToGithub = autoPostToGithub != null ? autoPostToGithub : false;
         this.openaiModel = openaiModel != null ? openaiModel : "gpt-4o-mini";
     }
 
