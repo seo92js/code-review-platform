@@ -54,6 +54,7 @@ public class AiReviewSettings {
         this.detailLevel = DetailLevel.STANDARD;
         this.autoReviewEnabled = false;
         this.openaiModel = "gpt-4o-mini";
+        this.ignorePatterns = "package-lock.json, yarn.lock, *.lock, .env*, *.pem, *.key, .yml, .yaml";
     }
 
     public void updateReviewSettings(ReviewTone tone, ReviewFocus focus, DetailLevel detailLevel,
