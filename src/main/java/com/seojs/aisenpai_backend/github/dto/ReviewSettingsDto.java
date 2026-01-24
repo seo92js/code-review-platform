@@ -14,7 +14,7 @@ public class ReviewSettingsDto {
     private ReviewTone tone;
     private ReviewFocus focus;
     private DetailLevel detailLevel;
-    private String customInstructions;
+
     private Boolean autoReviewEnabled;
     private Boolean autoPostToGithub;
     private String openaiModel;

@@ -5,7 +5,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -21,7 +21,7 @@ public class AnalyticsController {
     private final PageViewService pageViewService;
 
     @PostMapping("/pageview")
-    public ResponseEntity<Void> recordPageView(
+    public void recordPageView(
             @RequestBody PageViewRequest request,
             HttpServletRequest httpRequest,
             HttpServletResponse httpResponse) {
@@ -31,8 +31,6 @@ public class AnalyticsController {
         String userAgent = httpRequest.getHeader("User-Agent");
 
         pageViewService.recordPageView(sessionId, request.path(), ipAddress, userAgent);
-
-        return ResponseEntity.ok().build();
     }
 
     private String getOrCreateSessionId(HttpServletRequest request, HttpServletResponse response) {
