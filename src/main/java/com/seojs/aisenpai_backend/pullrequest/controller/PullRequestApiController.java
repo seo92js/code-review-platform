@@ -14,59 +14,60 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/api/pull-request/{owner}/{repo}")
 public class PullRequestApiController {
-    private final PullRequestService pullRequestService;
-    private final OAuth2AuthorizedClientService authorizedClientService;
+        private final PullRequestService pullRequestService;
+        private final OAuth2AuthorizedClientService authorizedClientService;
 
-    @GetMapping("/api/pull-request/{owner}/{repo}")
-    public List<PullRequestResponseDto> getPullRequestList(
-            @AuthenticationPrincipal OAuth2User principal,
-            @PathVariable String owner,
-            @PathVariable String repo) {
-        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
-                principal.getName());
-        String accessToken = authorizedClient.getAccessToken().getTokenValue();
+        @GetMapping
+        public List<PullRequestResponseDto> getPullRequestList(
+                        @AuthenticationPrincipal OAuth2User principal,
+                        @PathVariable String owner,
+                        @PathVariable String repo) {
+                OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
+                                principal.getName());
+                String accessToken = authorizedClient.getAccessToken().getTokenValue();
 
-        return pullRequestService.getPullRequestList(owner, repo, accessToken);
-    }
+                return pullRequestService.getPullRequestList(owner, repo, accessToken);
+        }
 
-    @GetMapping("/api/pull-request/{owner}/{repo}/{prNumber}/changes")
-    public List<ChangedFileDto> getPullRequestWithChanges(
-            @AuthenticationPrincipal OAuth2User principal,
-            @PathVariable String owner,
-            @PathVariable String repo,
-            @PathVariable Integer prNumber) {
-        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
-                principal.getName());
-        String accessToken = authorizedClient.getAccessToken().getTokenValue();
+        @GetMapping("/{prNumber}/changes")
+        public List<ChangedFileDto> getPullRequestWithChanges(
+                        @AuthenticationPrincipal OAuth2User principal,
+                        @PathVariable String owner,
+                        @PathVariable String repo,
+                        @PathVariable Integer prNumber) {
+                OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
+                                principal.getName());
+                String accessToken = authorizedClient.getAccessToken().getTokenValue();
 
-        return pullRequestService.getPullRequestWithChanges(owner, repo, prNumber, accessToken);
-    }
+                return pullRequestService.getPullRequestWithChanges(owner, repo, prNumber, accessToken);
+        }
 
-    @PostMapping("/api/pull-request/{owner}/{repo}/{prNumber}/review")
-    public void reviewPullRequest(
-            @AuthenticationPrincipal OAuth2User principal,
-            @PathVariable String owner,
-            @PathVariable String repo,
-            @PathVariable Integer prNumber,
-            @RequestParam(required = false) String model) {
-        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
-                principal.getName());
-        String accessToken = authorizedClient.getAccessToken().getTokenValue();
+        @PostMapping("/{prNumber}/review")
+        public void reviewPullRequest(
+                        @AuthenticationPrincipal OAuth2User principal,
+                        @PathVariable String owner,
+                        @PathVariable String repo,
+                        @PathVariable Integer prNumber,
+                        @RequestParam(required = false) String model) {
+                OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
+                                principal.getName());
+                String accessToken = authorizedClient.getAccessToken().getTokenValue();
 
-        pullRequestService.review(owner, repo, prNumber, accessToken, model);
-    }
+                pullRequestService.review(owner, repo, prNumber, accessToken, model);
+        }
 
-    @GetMapping("/api/pull-request/{owner}/{repo}/{prNumber}/review")
-    public String getPullRequestReview(
-            @AuthenticationPrincipal OAuth2User principal,
-            @PathVariable String owner,
-            @PathVariable String repo,
-            @PathVariable Integer prNumber) {
-        OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
-                principal.getName());
-        String accessToken = authorizedClient.getAccessToken().getTokenValue();
+        @GetMapping("/{prNumber}/review")
+        public String getPullRequestReview(
+                        @AuthenticationPrincipal OAuth2User principal,
+                        @PathVariable String owner,
+                        @PathVariable String repo,
+                        @PathVariable Integer prNumber) {
+                OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
+                                principal.getName());
+                String accessToken = authorizedClient.getAccessToken().getTokenValue();
 
-        return pullRequestService.getAiReview(owner, repo, prNumber, accessToken);
-    }
+                return pullRequestService.getAiReview(owner, repo, prNumber, accessToken);
+        }
 }

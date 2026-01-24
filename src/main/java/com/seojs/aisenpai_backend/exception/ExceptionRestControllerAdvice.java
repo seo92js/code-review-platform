@@ -37,6 +37,15 @@ public class ExceptionRestControllerAdvice {
         return new ErrorDto(errorCode, message);
     }
 
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(RuleNotFoundEx.class)
+    public ErrorDto ruleNotFound(RuleNotFoundEx e) {
+        String errorCode = "RULE_NOT_FOUND";
+        String message = e.getMessage();
+        log.error("{} : {}", errorCode, message);
+        return new ErrorDto(errorCode, message);
+    }
+
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     @ExceptionHandler(SecurityException.class)
     public ErrorDto securityException(SecurityException e) {

@@ -170,9 +170,9 @@ class GithubServiceTest {
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 any(ParameterizedTypeReference.class))).thenReturn(
-                new ResponseEntity<>(repos, HttpStatus.OK),
-                new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK),
-                new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK));
+                        new ResponseEntity<>(repos, HttpStatus.OK),
+                        new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK),
+                        new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK));
 
         // when
         var result = githubService.getRepositoriesWithWebhookStatus(accessToken);
@@ -280,7 +280,7 @@ class GithubServiceTest {
         assertEquals(ReviewTone.NEUTRAL, result.getTone());
         assertEquals(ReviewFocus.BOTH, result.getFocus());
         assertEquals(DetailLevel.STANDARD, result.getDetailLevel());
-        assertNull(result.getCustomInstructions());
+
         verify(githubAccountRepository).findByLoginId(loginId);
     }
 
@@ -319,7 +319,6 @@ class GithubServiceTest {
                 ReviewTone.FRIENDLY,
                 ReviewFocus.PRAISE_ONLY,
                 DetailLevel.DETAILED,
-                "보안에 집중해주세요",
                 true,
                 false,
                 "gpt-4o-mini");
@@ -332,7 +331,7 @@ class GithubServiceTest {
         assertEquals(ReviewTone.FRIENDLY, account.getAiSettings().getReviewTone());
         assertEquals(ReviewFocus.PRAISE_ONLY, account.getAiSettings().getReviewFocus());
         assertEquals(DetailLevel.DETAILED, account.getAiSettings().getDetailLevel());
-        assertEquals("보안에 집중해주세요", account.getAiSettings().getCustomInstructions());
+
         verify(githubAccountRepository).findByLoginId(loginId);
     }
 
@@ -341,7 +340,7 @@ class GithubServiceTest {
         // given
         String loginId = "non-existent-user";
         ReviewSettingsDto dto = new ReviewSettingsDto(
-                ReviewTone.STRICT, ReviewFocus.IMPROVEMENT_ONLY, DetailLevel.CONCISE, null, false,
+                ReviewTone.STRICT, ReviewFocus.IMPROVEMENT_ONLY, DetailLevel.CONCISE, false,
                 false,
                 "gpt-4o-mini");
 

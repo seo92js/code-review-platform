@@ -3,6 +3,7 @@ package com.seojs.aisenpai_backend.github.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -31,8 +32,8 @@ public class AiReviewSettings {
     @Column(nullable = false)
     private DetailLevel detailLevel = DetailLevel.STANDARD;
 
-    @Column(length = 1000)
-    private String customInstructions;
+    @OneToMany(mappedBy = "settings", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Rule> rules = new ArrayList<>();
 
     @Column(length = 1000)
     private String ignorePatterns;
@@ -62,11 +63,10 @@ public class AiReviewSettings {
     }
 
     public void updateReviewSettings(ReviewTone tone, ReviewFocus focus, DetailLevel detailLevel,
-            String customInstructions, Boolean autoReviewEnabled, Boolean autoPostToGithub, String openaiModel) {
+            Boolean autoReviewEnabled, Boolean autoPostToGithub, String openaiModel) {
         this.reviewTone = tone;
         this.reviewFocus = focus;
         this.detailLevel = detailLevel;
-        this.customInstructions = customInstructions;
         this.autoReviewEnabled = autoReviewEnabled != null ? autoReviewEnabled : false;
         this.autoPostToGithub = autoPostToGithub != null ? autoPostToGithub : false;
         this.openaiModel = openaiModel != null ? openaiModel : "gpt-4o-mini";
@@ -104,9 +104,23 @@ public class AiReviewSettings {
         sb.append("### 상세 수준\n");
         sb.append(this.detailLevel.getPrompt()).append("\n\n");
 
-        if (this.customInstructions != null && !this.customInstructions.isBlank()) {
-            sb.append("### 추가 지시사항\n");
-            sb.append(this.customInstructions).append("\n");
+        if (this.rules != null && !this.rules.isEmpty()) {
+            List<String> activeRules = this.rules.stream()
+                    .filter(Rule::isEnabled)
+                    .map(rule -> {
+                        String prefix = (rule.getTargetFilePattern() != null && !rule.getTargetFilePattern().isBlank())
+                                ? "[Target: " + rule.getTargetFilePattern() + "] "
+                                : "";
+                        return "- " + prefix + rule.getContent();
+                    })
+                    .toList();
+
+            if (!activeRules.isEmpty()) {
+                sb.append("### 코드 리뷰 규칙\n");
+                sb.append("다음 규칙들을 엄격하게 준수하여 리뷰해 주세요:\n");
+                activeRules.forEach(rule -> sb.append(rule).append("\n"));
+                sb.append("\n");
+            }
         }
 
         return sb.toString();

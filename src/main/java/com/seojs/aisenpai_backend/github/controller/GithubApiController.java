@@ -16,12 +16,13 @@ import java.util.List;
 
 @RequiredArgsConstructor
 @RestController
+@RequestMapping("/api/github")
 public class GithubApiController {
     private final GithubService githubService;
     private final OAuth2AuthorizedClientService authorizedClientService;
     private final PullRequestService pullRequestService;
 
-    @GetMapping("/api/github/status")
+    @GetMapping("/status")
     public boolean getLoginStatus(@AuthenticationPrincipal OAuth2User principal) {
         if (principal == null) {
             return false;
@@ -32,12 +33,12 @@ public class GithubApiController {
         return authorizedClient != null && authorizedClient.getAccessToken() != null;
     }
 
-    @GetMapping("/api/github/username")
+    @GetMapping("/username")
     public String getUsername(@AuthenticationPrincipal OAuth2User principal) {
         return principal.getAttribute("login");
     }
 
-    @GetMapping("/api/github/repositories")
+    @GetMapping("/repositories")
     public List<GitRepositoryWithWebhookResponseDto> getRepositories(@AuthenticationPrincipal OAuth2User principal) {
         OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
                 principal.getName());
@@ -48,7 +49,7 @@ public class GithubApiController {
     /**
      * 저장소 목록 캐시 초기화 (새로고침)
      */
-    @PostMapping("/api/github/repositories/refresh")
+    @PostMapping("/repositories/refresh")
     public void refreshRepositories(@AuthenticationPrincipal OAuth2User principal) {
         OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
                 principal.getName());
@@ -56,7 +57,7 @@ public class GithubApiController {
         githubService.evictRepositoryCache(accessToken);
     }
 
-    @PostMapping("/api/github/webhook/")
+    @PostMapping("/webhook/")
     public void handleWebhook(@RequestBody String payload,
             @RequestHeader("X-Github-Event") String event,
             @RequestHeader(value = "X-Hub-Signature-256", required = false) String signature) {
@@ -65,7 +66,7 @@ public class GithubApiController {
         }
     }
 
-    @PostMapping("/api/github/register")
+    @PostMapping("/register")
     public void registerWebhook(@AuthenticationPrincipal OAuth2User principal, @RequestParam String repository) {
         OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("github",
                 principal.getName());
@@ -75,46 +76,46 @@ public class GithubApiController {
         githubService.registerWebhook(accessToken, owner, repository);
     }
 
-    @GetMapping("/api/github/review-settings")
+    @GetMapping("/review-settings")
     public ReviewSettingsDto getReviewSettings(@AuthenticationPrincipal OAuth2User principal) {
         String owner = principal.getAttribute("login");
         return githubService.getReviewSettings(owner);
     }
 
-    @PatchMapping("/api/github/review-settings")
+    @PatchMapping("/review-settings")
     public Long updateReviewSettings(@AuthenticationPrincipal OAuth2User principal,
             @RequestBody ReviewSettingsDto dto) {
         String owner = principal.getAttribute("login");
         return githubService.updateReviewSettings(owner, dto);
     }
 
-    @GetMapping("/api/github/ignore")
+    @GetMapping("/ignore")
     public List<String> getIgnorePatterns(@AuthenticationPrincipal OAuth2User principal) {
         String owner = principal.getAttribute("login");
         return githubService.getIgnorePatterns(owner);
     }
 
-    @PatchMapping("/api/github/ignore")
+    @PatchMapping("/ignore")
     public Long updateIgnorePatterns(@AuthenticationPrincipal OAuth2User principal,
             @RequestBody List<String> patterns) {
         String owner = principal.getAttribute("login");
         return githubService.updateIgnorePatterns(owner, patterns);
     }
 
-    @PatchMapping("/api/github/openai")
+    @PatchMapping("/openai")
     public Long updateOpenAiKey(@AuthenticationPrincipal OAuth2User principal, @RequestBody OpenAiKeyDto dto) {
         String owner = principal.getAttribute("login");
         String key = dto.getKey();
         return githubService.updateOpenAiKey(owner, key);
     }
 
-    @GetMapping("/api/github/openai")
+    @GetMapping("/openai")
     public String getOpenAiKey(@AuthenticationPrincipal OAuth2User principal) {
         String owner = principal.getAttribute("login");
         return githubService.getMaskedOpenAiKey(owner);
     }
 
-    @PostMapping("/api/github/openai/validate")
+    @PostMapping("/openai/validate")
     public boolean validateOpenAiKey(@RequestBody OpenAiKeyDto dto) {
         return githubService.validateOpenAiKey(dto.getKey());
     }
