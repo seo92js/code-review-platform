@@ -1,6 +1,7 @@
 package com.seojs.aisenpai_backend.github.dto;
 
 import com.seojs.aisenpai_backend.github.entity.Rule;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,6 +14,7 @@ import lombok.NoArgsConstructor;
 public class RuleResponseDto {
     private Long id;
     private String content;
+    @JsonProperty("isEnabled")
     private boolean isEnabled;
     private String targetFilePattern;
 
