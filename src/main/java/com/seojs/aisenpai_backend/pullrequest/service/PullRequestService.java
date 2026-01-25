@@ -4,7 +4,9 @@ import com.seojs.aisenpai_backend.exception.OpenAiKeyNotSetEx;
 import com.seojs.aisenpai_backend.exception.PullRequestNotFoundEx;
 import com.seojs.aisenpai_backend.exception.WebhookProcessingEx;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.seojs.aisenpai_backend.github.dto.AiReviewResponseDto;
 import com.seojs.aisenpai_backend.github.dto.ChangedFileDto;
+import com.seojs.aisenpai_backend.github.dto.GithubReviewRequestDto;
 import com.seojs.aisenpai_backend.github.dto.WebhookPayloadDto;
 import com.seojs.aisenpai_backend.github.entity.GithubAccount;
 import com.seojs.aisenpai_backend.github.service.GithubService;
@@ -162,9 +164,49 @@ public class PullRequestService {
             if (Boolean.TRUE.equals(account.getAiSettings().getAutoPostToGithub())) {
                 try {
                     String accessToken = tokenEncryptionService.decryptToken(account.getAccessToken());
-                    String formattedReview = formatReviewForGithub(aiReview);
-                    githubService.postPRComment(accessToken, account.getLoginId(), pr.getRepositoryName(), prNumber,
-                            formattedReview);
+
+                    try {
+                        // Markdown 코드 블록 제거 (본문의 코드 블록은 유지하고 감싸고 있는 태그만 제거)
+                        String sanitizedAiReview = aiReview.trim();
+                        if (sanitizedAiReview.startsWith("```json")) {
+                            sanitizedAiReview = sanitizedAiReview.substring(7);
+                        } else if (sanitizedAiReview.startsWith("```")) {
+                            sanitizedAiReview = sanitizedAiReview.substring(3);
+                        }
+                        if (sanitizedAiReview.endsWith("```")) {
+                            sanitizedAiReview = sanitizedAiReview.substring(0, sanitizedAiReview.length() - 3);
+                        }
+                        sanitizedAiReview = sanitizedAiReview.trim();
+
+                        AiReviewResponseDto aiResponse = objectMapper.readValue(
+                                sanitizedAiReview, AiReviewResponseDto.class);
+
+                        // 코멘트가 있을 경우
+                        if (aiResponse.getComments() != null && !aiResponse.getComments().isEmpty()) {
+                            GithubReviewRequestDto reviewRequest = GithubReviewRequestDto
+                                    .builder()
+                                    .body(aiResponse.getGeneralReview()) // 총평
+                                    .event("COMMENT") // 기본값 COMMENT
+                                    .comments(aiResponse.getComments()) // 인라인 코멘트 리스트
+                                    .build();
+
+                            githubService.postPRReview(accessToken, account.getLoginId(), pr.getRepositoryName(),
+                                    prNumber, reviewRequest);
+                        } else {
+                            String body = aiResponse.getGeneralReview() != null ? aiResponse.getGeneralReview()
+                                    : aiReview;
+                            String formattedReview = formatReviewForGithub(body);
+                            githubService.postPRComment(accessToken, account.getLoginId(), pr.getRepositoryName(),
+                                    prNumber, formattedReview);
+                        }
+
+                    } catch (Exception e) {
+                        log.warn("Failed to parse AI review as JSON, falling back to comment. Error: {}",
+                                e.getMessage());
+                        String formattedReview = formatReviewForGithub(aiReview);
+                        githubService.postPRComment(accessToken, account.getLoginId(), pr.getRepositoryName(), prNumber,
+                                formattedReview);
+                    }
                 } catch (Exception e) {
                     log.warn("Failed to post review to GitHub PR #{}: {}", prNumber, e.getMessage());
                 }
