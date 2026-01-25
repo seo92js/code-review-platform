@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -320,6 +321,10 @@ public class GithubService {
                     .block();
 
             log.info("Posted inline review to PR #{} in {}/{}", prNumber, owner, repo);
+        } catch (WebClientResponseException e) {
+            log.error("Failed to post inline review to PR #{} in {}/{}: {} - Body: {}", prNumber, owner, repo,
+                    e.getMessage(), e.getResponseBodyAsString());
+            throw new GitHubApiEx("Failed to post PR review", e);
         } catch (Exception e) {
             log.error("Failed to post inline review to PR #{} in {}/{}: {}", prNumber, owner, repo, e.getMessage());
             throw new GitHubApiEx("Failed to post PR review", e);
