@@ -1,6 +1,7 @@
 package com.seojs.aisenpai_backend.github.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -15,6 +16,7 @@ public class ReviewCommentDto {
     private String path;
 
     @JsonAlias("codeSnippet")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String codeSnippet;
 
     private Integer line;
