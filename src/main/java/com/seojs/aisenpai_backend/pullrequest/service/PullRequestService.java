@@ -185,7 +185,7 @@ public class PullRequestService {
 
             // Diff 정보 가져오기 (라인 매칭용)
             List<ChangedFileDto> changedFiles = githubService.getChangedFiles(accessToken,
-                    pr.getRepositoryName().split("/")[0], pr.getRepositoryName().split("/")[1], pr.getPrNumber());
+                    pr.getGithubAccount().getLoginId(), pr.getRepositoryName(), pr.getPrNumber());
 
             try {
                 AiReviewResponseDto aiResponse = objectMapper.readValue(sanitizedAiReview, AiReviewResponseDto.class);
