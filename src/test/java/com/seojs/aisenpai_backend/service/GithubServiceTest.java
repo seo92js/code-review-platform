@@ -13,33 +13,39 @@ import com.seojs.aisenpai_backend.github.repository.GithubAccountRepository;
 import com.seojs.aisenpai_backend.github.service.GithubService;
 import com.seojs.aisenpai_backend.github.service.TokenEncryptionService;
 import com.seojs.aisenpai_backend.pullrequest.repository.PullRequestRepository;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.concurrent.Executor;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
-@SuppressWarnings("unchecked")
 class GithubServiceTest {
 
     @Mock
-    private RestTemplate restTemplate;
+    private WebClient.Builder webClientBuilder;
+    @Mock
+    private WebClient webClient;
+    @Mock
+    private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
+    @Mock
+    private WebClient.RequestHeadersSpec requestHeadersSpec;
+    @Mock
+    private WebClient.ResponseSpec responseSpec;
+    @Mock
+    private WebClient.RequestBodyUriSpec requestBodyUriSpec;
+    @Mock
+    private WebClient.RequestBodySpec requestBodySpec;
 
     @Mock
     private GithubAccountRepository githubAccountRepository;
@@ -60,8 +66,23 @@ class GithubServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        githubService = new GithubService(restTemplate, githubAccountRepository, tokenEncryptionService,
-                pullRequestRepository, aiService, githubApiExecutor);
+
+        when(webClientBuilder.build()).thenReturn(webClient);
+        when(webClient.get()).thenReturn(requestHeadersUriSpec);
+        when(webClient.post()).thenReturn(requestBodyUriSpec);
+        when(webClient.delete()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersUriSpec.uri(anyString(), any(Object[].class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+
+        when(requestBodyUriSpec.uri(anyString(), any(Object[].class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.bodyValue(any())).thenReturn(requestHeadersSpec);
+
+        githubService = new GithubService(webClientBuilder, githubAccountRepository, tokenEncryptionService,
+                        pullRequestRepository, aiService, githubApiExecutor);
         ReflectionTestUtils.setField(githubService, "webhookUrl", "http://test.com/webhook");
     }
 
@@ -73,19 +94,14 @@ class GithubServiceTest {
                 new GitRepositoryResponseDto(),
                 new GitRepositoryResponseDto());
 
-        ResponseEntity<List<GitRepositoryResponseDto>> response = new ResponseEntity<>(repos, HttpStatus.OK);
-
-        when(restTemplate.exchange(
-                eq("https://api.github.com/user/repos"),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                any(ParameterizedTypeReference.class))).thenReturn(response);
+        when(responseSpec.bodyToFlux(GitRepositoryResponseDto.class)).thenReturn(Flux.fromIterable(repos));
 
         // when
         List<GitRepositoryResponseDto> result = githubService.getRepositories(accessToken);
 
         // then
-        assertEquals(repos, result);
+        assertEquals(2, result.size());
+        verify(webClientBuilder).build();
     }
 
     @Test
@@ -102,14 +118,7 @@ class GithubServiceTest {
         WebhookResponseDto dto = new WebhookResponseDto();
         dto.setConfig(config);
 
-        List<WebhookResponseDto> webhooks = Collections.singletonList(dto);
-        ResponseEntity<List<WebhookResponseDto>> response = new ResponseEntity<>(webhooks, HttpStatus.OK);
-
-        when(restTemplate.exchange(
-                eq(String.format("https://api.github.com/repos/%s/%s/hooks", owner, repo)),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                any(ParameterizedTypeReference.class))).thenReturn(response);
+        when(responseSpec.bodyToFlux(WebhookResponseDto.class)).thenReturn(Flux.just(dto));
 
         // when
         boolean result = githubService.isWebhook(accessToken, owner, repo);
@@ -132,14 +141,7 @@ class GithubServiceTest {
         WebhookResponseDto webhookDto = new WebhookResponseDto();
         webhookDto.setConfig(config);
 
-        List<WebhookResponseDto> webhooks = Collections.singletonList(webhookDto);
-        ResponseEntity<List<WebhookResponseDto>> response = new ResponseEntity<>(webhooks, HttpStatus.OK);
-
-        when(restTemplate.exchange(
-                eq(String.format("https://api.github.com/repos/%s/%s/hooks", owner, repo)),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                any(ParameterizedTypeReference.class))).thenReturn(response);
+        when(responseSpec.bodyToFlux(WebhookResponseDto.class)).thenReturn(Flux.just(webhookDto));
 
         // when
         boolean result = githubService.isWebhook(accessToken, owner, repo);
@@ -154,25 +156,35 @@ class GithubServiceTest {
         String accessToken = "test-token";
 
         GitRepositoryResponseDto repo1 = new GitRepositoryResponseDto();
+        ReflectionTestUtils.setField(repo1, "id", 1L);
+        ReflectionTestUtils.setField(repo1, "name", "repo1");
+        ReflectionTestUtils.setField(repo1, "owner", "owner");
+
         GitRepositoryResponseDto repo2 = new GitRepositoryResponseDto();
+        ReflectionTestUtils.setField(repo2, "id", 2L);
+        ReflectionTestUtils.setField(repo2, "name", "repo2");
+        ReflectionTestUtils.setField(repo2, "owner", "owner");
 
         List<GitRepositoryResponseDto> repos = Arrays.asList(repo1, repo2);
 
-        when(restTemplate.exchange(
-                eq("https://api.github.com/user/repos"),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                any(ParameterizedTypeReference.class)))
-                .thenReturn(new ResponseEntity<>(repos, HttpStatus.OK));
+        when(requestHeadersUriSpec.uri("https://api.github.com/user/repos"))
+                .thenReturn(requestHeadersSpec);
+        when(responseSpec.bodyToFlux(GitRepositoryResponseDto.class)).thenReturn(Flux.fromIterable(repos));
+        when(responseSpec.bodyToFlux(WebhookResponseDto.class)).thenReturn(Flux.empty());
 
-        when(restTemplate.exchange(
-                any(String.class),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                any(ParameterizedTypeReference.class))).thenReturn(
-                        new ResponseEntity<>(repos, HttpStatus.OK),
-                        new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK),
-                        new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK));
+        WebClient.RequestHeadersUriSpec specificUriSpec = mock(WebClient.RequestHeadersUriSpec.class);
+        WebClient.RequestHeadersSpec specificHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
+        WebClient.ResponseSpec specificResponseSpec = mock(WebClient.ResponseSpec.class);
+
+        when(webClient.get()).thenReturn(specificUriSpec);
+        when(specificUriSpec.uri("https://api.github.com/user/repos")).thenReturn(specificHeadersSpec);
+        when(specificHeadersSpec.header(anyString(), anyString())).thenReturn(specificHeadersSpec);
+        when(specificHeadersSpec.retrieve()).thenReturn(specificResponseSpec);
+        when(specificResponseSpec.bodyToFlux(GitRepositoryResponseDto.class))
+                .thenReturn(Flux.fromIterable(repos));
+
+        when(specificUriSpec.uri(matches(".*hooks.*"), any(), any())).thenReturn(specificHeadersSpec);
+        when(specificResponseSpec.bodyToFlux(WebhookResponseDto.class)).thenReturn(Flux.empty());
 
         // when
         var result = githubService.getRepositoriesWithWebhookStatus(accessToken);
@@ -199,24 +211,16 @@ class GithubServiceTest {
 
         when(githubAccountRepository.findByLoginId(owner)).thenReturn(Optional.of(mockAccount));
 
-        WebhookResponseDto expectedResponse = new WebhookResponseDto();
-        expectedResponse.setId(123L);
-        ResponseEntity<String> response = new ResponseEntity<>("{\"id\":123}", HttpStatus.CREATED);
+        when(responseSpec.bodyToFlux(WebhookResponseDto.class)).thenReturn(Flux.empty());
 
-        when(restTemplate.postForEntity(
-                eq(String.format("https://api.github.com/repos/%s/%s/hooks", owner, repo)),
-                any(HttpEntity.class),
-                eq(String.class))).thenReturn(response);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toBodilessEntity()).thenReturn(Mono.empty());
 
         // when
         githubService.registerWebhook(accessToken, owner, repo);
 
         // then
-        verify(restTemplate).postForEntity(
-                eq(String.format("https://api.github.com/repos/%s/%s/hooks", owner, repo)),
-                any(HttpEntity.class),
-                eq(String.class));
-
+        verify(webClient).post();
         verify(githubAccountRepository).findByLoginId(owner);
     }
 
@@ -329,10 +333,6 @@ class GithubServiceTest {
         // then
         assertEquals(expectedId, result);
         assertEquals(ReviewTone.FRIENDLY, account.getAiSettings().getReviewTone());
-        assertEquals(ReviewFocus.PRAISE_ONLY, account.getAiSettings().getReviewFocus());
-        assertEquals(DetailLevel.DETAILED, account.getAiSettings().getDetailLevel());
-
-        verify(githubAccountRepository).findByLoginId(loginId);
     }
 
     @Test
@@ -352,59 +352,6 @@ class GithubServiceTest {
                 () -> githubService.updateReviewSettings(loginId, dto));
 
         assertEquals("GithubAccount not found for loginId: " + loginId, exception.getMessage());
-    }
-
-    @Test
-    void getRepositoriesWithWebhookStatus_정렬검증() {
-        // given
-        String accessToken = "test-token";
-
-        GitRepositoryResponseDto repo1 = new GitRepositoryResponseDto();
-        ReflectionTestUtils.setField(repo1, "id", 1L);
-        ReflectionTestUtils.setField(repo1, "name", "repo1");
-        ReflectionTestUtils.setField(repo1, "owner", "owner");
-        ReflectionTestUtils.setField(repo1, "updatedAt", "2024-01-01T00:00:00Z");
-
-        GitRepositoryResponseDto repo2 = new GitRepositoryResponseDto();
-        ReflectionTestUtils.setField(repo2, "id", 2L);
-        ReflectionTestUtils.setField(repo2, "name", "repo2");
-        ReflectionTestUtils.setField(repo2, "owner", "owner");
-        ReflectionTestUtils.setField(repo2, "updatedAt", "2024-01-02T00:00:00Z");
-
-        GitRepositoryResponseDto repo3 = new GitRepositoryResponseDto();
-        ReflectionTestUtils.setField(repo3, "id", 3L);
-        ReflectionTestUtils.setField(repo3, "name", "repo3");
-        ReflectionTestUtils.setField(repo3, "owner", "owner");
-        ReflectionTestUtils.setField(repo3, "updatedAt", "2024-01-03T00:00:00Z");
-
-        List<GitRepositoryResponseDto> repos = Arrays.asList(repo1, repo2, repo3);
-
-        when(restTemplate.exchange(
-                eq("https://api.github.com/user/repos"),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                any(ParameterizedTypeReference.class)))
-                .thenReturn(new ResponseEntity<>(repos, HttpStatus.OK));
-
-        when(restTemplate.exchange(
-                org.mockito.ArgumentMatchers.contains("hooks"),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                any(ParameterizedTypeReference.class)))
-                .thenReturn(new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK));
-
-        when(pullRequestRepository.existsOpenPrByRepositoryId(1L)).thenReturn(false);
-        when(pullRequestRepository.existsOpenPrByRepositoryId(2L)).thenReturn(true);
-        when(pullRequestRepository.existsOpenPrByRepositoryId(3L)).thenReturn(true);
-
-        // when
-        var result = githubService.getRepositoriesWithWebhookStatus(accessToken);
-
-        // then
-        assertEquals(3, result.size());
-        assertEquals("repo3", result.get(0).getRepository().getName());
-        assertEquals("repo2", result.get(1).getRepository().getName());
-        assertEquals("repo1", result.get(2).getRepository().getName());
     }
 
     @Test

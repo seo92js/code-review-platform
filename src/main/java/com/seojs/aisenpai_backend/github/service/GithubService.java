@@ -15,16 +15,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +32,7 @@ import java.util.stream.Collectors;
 @Service
 public class GithubService {
 
-    private final RestTemplate restTemplate;
+    private final WebClient.Builder webClientBuilder;
     private final GithubAccountRepository githubAccountRepository;
     private final TokenEncryptionService tokenEncryptionService;
     private final PullRequestRepository pullRequestRepository;
@@ -52,38 +47,29 @@ public class GithubService {
      * 사용자의 GitHub 저장소 목록을 조회
      */
     public List<GitRepositoryResponseDto> getRepositories(String accessToken) {
-        String url = "https://api.github.com/user/repos";
-
-        HttpHeaders headers = createAuthHeaders(accessToken);
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-
-        ResponseEntity<List<GitRepositoryResponseDto>> response = restTemplate.exchange(
-                url,
-                HttpMethod.GET,
-                entity,
-                new ParameterizedTypeReference<>() {
-                });
-
-        return response.getBody();
+        return webClientBuilder.build()
+                .get()
+                .uri("https://api.github.com/user/repos")
+                .header("Authorization", "Bearer " + accessToken)
+                .retrieve()
+                .bodyToFlux(GitRepositoryResponseDto.class)
+                .collectList()
+                .block();
     }
 
     /**
      * 특정 저장소의 ID를 GitHub API로 조회
      */
     public Long getRepositoryId(String accessToken, String owner, String repo) {
-        String url = String.format("https://api.github.com/repos/%s/%s", owner, repo);
-
-        HttpHeaders headers = createAuthHeaders(accessToken);
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-
         try {
-            ResponseEntity<GitRepositoryResponseDto> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    entity,
-                    GitRepositoryResponseDto.class);
+            GitRepositoryResponseDto repository = webClientBuilder.build()
+                    .get()
+                    .uri("https://api.github.com/repos/{owner}/{repo}", owner, repo)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .bodyToMono(GitRepositoryResponseDto.class)
+                    .block();
 
-            GitRepositoryResponseDto repository = response.getBody();
             return repository != null ? repository.getId() : null;
         } catch (Exception e) {
             throw new GitHubApiEx("Failed to get repository: " + owner + "/" + repo, e);
@@ -94,19 +80,14 @@ public class GithubService {
      * 특정 저장소에 지정된 webhook이 등록되어 있는지 확인
      */
     public boolean isWebhook(String accessToken, String owner, String repo) {
-        String url = String.format("https://api.github.com/repos/%s/%s/hooks", owner, repo);
-
-        HttpHeaders headers = createAuthHeaders(accessToken);
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-
-        ResponseEntity<List<WebhookResponseDto>> response = restTemplate.exchange(
-                url,
-                HttpMethod.GET,
-                entity,
-                new ParameterizedTypeReference<>() {
-                });
-
-        List<WebhookResponseDto> webhooks = response.getBody();
+        List<WebhookResponseDto> webhooks = webClientBuilder.build()
+                .get()
+                .uri("https://api.github.com/repos/{owner}/{repo}/hooks", owner, repo)
+                .header("Authorization", "Bearer " + accessToken)
+                .retrieve()
+                .bodyToFlux(WebhookResponseDto.class)
+                .collectList()
+                .block();
 
         if (webhooks != null) {
             return webhooks.stream()
@@ -281,22 +262,15 @@ public class GithubService {
      */
     public List<ChangedFileDto> getChangedFiles(String accessToken, String owner, String repo, int prNumber) {
         try {
-            String url = String.format("https://api.github.com/repos/%s/%s/pulls/%d/files", owner, repo, prNumber);
-
-            HttpHeaders headers = createAuthHeaders(accessToken);
-            headers.set("Accept", "application/vnd.github.v3+json");
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-
-            ResponseEntity<List<ChangedFileDto>> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    entity,
-                    new ParameterizedTypeReference<>() {
-                    });
-
-            List<ChangedFileDto> changedFiles = response.getBody();
-            return changedFiles != null ? changedFiles : Collections.emptyList();
-
+            return webClientBuilder.build()
+                    .get()
+                    .uri("https://api.github.com/repos/{owner}/{repo}/pulls/{prNumber}/files", owner, repo, prNumber)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .retrieve()
+                    .bodyToFlux(ChangedFileDto.class)
+                    .collectList()
+                    .block();
         } catch (Exception e) {
             throw new GitHubApiEx("Failed to get changed files", e);
         }
@@ -306,18 +280,21 @@ public class GithubService {
      * Github PR에 댓글 게시
      */
     public void postPRComment(String accessToken, String owner, String repo, int prNumber, String body) {
-        String url = String.format("https://api.github.com/repos/%s/%s/issues/%d/comments", owner, repo, prNumber);
-
-        HttpHeaders headers = createAuthHeaders(accessToken);
-        headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-
         Map<String, String> requestBody = new HashMap<>();
         requestBody.put("body", body);
 
-        HttpEntity<Map<String, String>> entity = new HttpEntity<>(requestBody, headers);
-
         try {
-            restTemplate.postForEntity(url, entity, String.class);
+            webClientBuilder.build()
+                    .post()
+                    .uri("https://api.github.com/repos/{owner}/{repo}/issues/{prNumber}/comments", owner, repo,
+                            prNumber)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .toBodilessEntity()
+                    .block();
+
             log.info("Posted review comment to PR #{} in {}/{}", prNumber, owner, repo);
         } catch (Exception e) {
             log.error("Failed to post comment to PR #{} in {}/{}: {}", prNumber, owner, repo, e.getMessage());
@@ -330,30 +307,23 @@ public class GithubService {
      */
     public void postPRReview(String accessToken, String owner, String repo, int prNumber,
             GithubReviewRequestDto reviewRequest) {
-        String url = String.format("https://api.github.com/repos/%s/%s/pulls/%d/reviews", owner, repo, prNumber);
-
-        HttpHeaders headers = createAuthHeaders(accessToken);
-        headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-        headers.set("Accept", "application/vnd.github.v3+json");
-
-        HttpEntity<GithubReviewRequestDto> entity = new HttpEntity<>(reviewRequest, headers);
-
         try {
-            restTemplate.postForEntity(url, entity, String.class);
+            webClientBuilder.build()
+                    .post()
+                    .uri("https://api.github.com/repos/{owner}/{repo}/pulls/{prNumber}/reviews", owner, repo, prNumber)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(reviewRequest)
+                    .retrieve()
+                    .toBodilessEntity()
+                    .block();
+
             log.info("Posted inline review to PR #{} in {}/{}", prNumber, owner, repo);
         } catch (Exception e) {
             log.error("Failed to post inline review to PR #{} in {}/{}: {}", prNumber, owner, repo, e.getMessage());
             throw new GitHubApiEx("Failed to post PR review", e);
         }
-    }
-
-    /**
-     * GitHub API 인증 헤더 생성
-     */
-    private HttpHeaders createAuthHeaders(String accessToken) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
-        return headers;
     }
 
     /**
@@ -385,18 +355,19 @@ public class GithubService {
         // 기존 웹훅 삭제 (중복 방지 및 시크릿 갱신)
         deleteExistingWebhook(accessToken, owner, repository);
 
-        // 새 웹훅 등록
-        String url = String.format("https://api.github.com/repos/%s/%s/hooks", owner, repository);
-
         WebhookCreateRequestDto request = createWebhookRequest(account.getWebhookSecret());
-        HttpHeaders headers = createAuthHeaders(accessToken);
-        HttpEntity<WebhookCreateRequestDto> entity = new HttpEntity<>(request, headers);
 
         try {
-            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
-            if (!response.getStatusCode().is2xxSuccessful()) {
-                throw new WebhookRegistrationEx("Webhook registration failed: " + response.getStatusCode());
-            }
+            webClientBuilder.build()
+                    .post()
+                    .uri("https://api.github.com/repos/{owner}/{repo}/hooks", owner, repository)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(request)
+                    .retrieve()
+                    .toBodilessEntity()
+                    .block();
+
             log.info("Webhook registered for {}/{}", owner, repository);
         } catch (Exception e) {
             throw new WebhookRegistrationEx("Error occurred during webhook registration", e);
@@ -407,23 +378,28 @@ public class GithubService {
      * 기존에 등록된 웹훅이 있다면 삭제
      */
     private void deleteExistingWebhook(String accessToken, String owner, String repo) {
-        String url = String.format("https://api.github.com/repos/%s/%s/hooks", owner, repo);
-        HttpHeaders headers = createAuthHeaders(accessToken);
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-
         try {
-            ResponseEntity<List<WebhookResponseDto>> response = restTemplate.exchange(
-                    url, HttpMethod.GET, entity, new ParameterizedTypeReference<>() {
-                    });
+            List<WebhookResponseDto> webhooks = webClientBuilder.build()
+                    .get()
+                    .uri("https://api.github.com/repos/{owner}/{repo}/hooks", owner, repo)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .bodyToFlux(WebhookResponseDto.class)
+                    .collectList()
+                    .block();
 
-            List<WebhookResponseDto> webhooks = response.getBody();
             if (webhooks != null) {
                 for (WebhookResponseDto hook : webhooks) {
                     Object configUrl = hook.getConfig().get("url");
                     if (configUrl != null && configUrl.toString().equals(webhookUrl)) {
-                        String deleteUrl = String.format("https://api.github.com/repos/%s/%s/hooks/%d", owner, repo,
-                                hook.getId());
-                        restTemplate.exchange(deleteUrl, HttpMethod.DELETE, entity, Void.class);
+                        webClientBuilder.build()
+                                .delete()
+                                .uri("https://api.github.com/repos/{owner}/{repo}/hooks/{hookId}", owner, repo,
+                                        hook.getId())
+                                .header("Authorization", "Bearer " + accessToken)
+                                .retrieve()
+                                .toBodilessEntity()
+                                .block();
                     }
                 }
             }
