@@ -126,15 +126,15 @@ public class AiReviewSettings {
         sb.append("### 응답 형식 (매우 중요)\n");
         sb.append("반드시 아래 JSON 형식으로만 응답해 주세요. 마크다운 코드 블록(```json 등)도 포함하지 말고 오직 JSON 문자열만 반환하세요.\n");
         sb.append("파일명(file)은 제공된 diff 상의 경로와 정확히 일치해야 합니다.\n");
-        sb.append(
-                "라인(line)은 변경사항(diff)에 포함된 라인(추가 또는 수정된 라인)이어야 합니다. 변경되지 않은 라인이나 Context 라인에 코멘트하면 오류가 발생할 수 있습니다.\n");
-        sb.append("수정되지 않은 라인에 대한 코멘트가 필요하다면, 인라인 코멘트 대신 'generalReview'에 포함시켜 주세요.\n");
+        sb.append("라인 번호(line) 대신, 지적하고자 하는 코드의 스니펫(codeSnippet)을 정확히 포함해 주세요.\n");
+        sb.append("codeSnippet은 diff에 포함된 코드(추가된 라인) 중 한 줄과 **정확히** 일치해야 합니다. (공백 포함)\n");
+        sb.append("수정되지 않은 라인에 대한 코멘트가 필요하다면, 'generalReview'에 포함시켜 주세요.\n");
         sb.append("{\n");
         sb.append("  \"generalReview\": \"전반적인 리뷰 요약 (한국어)\",\n");
         sb.append("  \"comments\": [\n");
         sb.append("    {\n");
         sb.append("      \"file\": \"src/main/java/Example.java\",\n");
-        sb.append("      \"line\": 10,\n");
+        sb.append("      \"codeSnippet\": \"지적할 코드의 한 줄 (필수)\",\n");
         sb.append("      \"comment\": \"코멘트 내용 (한국어)\"\n");
         sb.append("    }\n");
         sb.append("  ]\n");
