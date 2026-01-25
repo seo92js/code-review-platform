@@ -162,68 +162,7 @@ public class PullRequestService {
 
             // GitHub PR에 댓글 자동 게시
             if (Boolean.TRUE.equals(account.getAiSettings().getAutoPostToGithub())) {
-                try {
-                    String accessToken = tokenEncryptionService.decryptToken(account.getAccessToken());
-
-                    try {
-                        // Markdown 코드 블록 제거 (본문의 코드 블록은 유지하고 감싸고 있는 태그만 제거)
-                        String sanitizedAiReview = aiReview.trim();
-                        if (sanitizedAiReview.startsWith("```json")) {
-                            sanitizedAiReview = sanitizedAiReview.substring(7);
-                        } else if (sanitizedAiReview.startsWith("```")) {
-                            sanitizedAiReview = sanitizedAiReview.substring(3);
-                        }
-                        if (sanitizedAiReview.endsWith("```")) {
-                            sanitizedAiReview = sanitizedAiReview.substring(0, sanitizedAiReview.length() - 3);
-                        }
-                        sanitizedAiReview = sanitizedAiReview.trim();
-
-                        AiReviewResponseDto aiResponse = objectMapper.readValue(
-                                sanitizedAiReview, AiReviewResponseDto.class);
-
-                        // 코멘트가 있을 경우
-                        if (aiResponse.getComments() != null && !aiResponse.getComments().isEmpty()) {
-                            GithubReviewRequestDto reviewRequest = GithubReviewRequestDto
-                                    .builder()
-                                    .body(aiResponse.getGeneralReview()) // 총평
-                                    .event("COMMENT") // 기본값 COMMENT
-                                    .comments(aiResponse.getComments()) // 인라인 코멘트 리스트
-                                    .build();
-
-                            try {
-                                githubService.postPRReview(accessToken, account.getLoginId(), pr.getRepositoryName(),
-                                        prNumber, reviewRequest);
-                            } catch (Exception e) {
-                                log.warn("Failed to post inline review: {}. Falling back to general comment.",
-                                        e.getMessage());
-                                // 인라인 코멘트 실패 시 (예: 라인 번호 불일치) 일반 코멘트로 Fallback
-                                String fallbackBody = aiResponse.getGeneralReview() + "\n\n### 상세 코멘트 (전환됨)\n";
-                                for (var comment : aiResponse.getComments()) {
-                                    fallbackBody += String.format("- **%s (Line %d)**: %s\n",
-                                            comment.getPath(), comment.getLine(), comment.getBody());
-                                }
-                                String formattedReview = formatReviewForGithub(fallbackBody);
-                                githubService.postPRComment(accessToken, account.getLoginId(), pr.getRepositoryName(),
-                                        prNumber, formattedReview);
-                            }
-                        } else {
-                            String body = aiResponse.getGeneralReview() != null ? aiResponse.getGeneralReview()
-                                    : aiReview;
-                            String formattedReview = formatReviewForGithub(body);
-                            githubService.postPRComment(accessToken, account.getLoginId(), pr.getRepositoryName(),
-                                    prNumber, formattedReview);
-                        }
-
-                    } catch (Exception e) {
-                        log.warn("Failed to parse AI review as JSON, falling back to comment. Error: {}",
-                                e.getMessage());
-                        String formattedReview = formatReviewForGithub(aiReview);
-                        githubService.postPRComment(accessToken, account.getLoginId(), pr.getRepositoryName(), prNumber,
-                                formattedReview);
-                    }
-                } catch (Exception e) {
-                    log.warn("Failed to post review to GitHub PR #{}: {}", prNumber, e.getMessage());
-                }
+                processAndPostReview(account, pr, aiReview);
             }
         } else if (status == ReviewStatus.FAILED) {
             notificationService.createNotification(
@@ -231,6 +170,88 @@ public class PullRequestService {
                     NotificationType.REVIEW_FAILED,
                     pr);
         }
+    }
+
+    /**
+     * AI 리뷰를 처리하고 GitHub에 게시 (파싱 및 분기 처리)
+     */
+    private void processAndPostReview(GithubAccount account, PullRequest pr, String aiReview) {
+        try {
+            String accessToken = tokenEncryptionService.decryptToken(account.getAccessToken());
+            String sanitizedAiReview = sanitizeAiReview(aiReview);
+
+            try {
+                AiReviewResponseDto aiResponse = objectMapper.readValue(sanitizedAiReview, AiReviewResponseDto.class);
+
+                // 코멘트가 있을 경우
+                if (aiResponse.getComments() != null && !aiResponse.getComments().isEmpty()) {
+                    GithubReviewRequestDto reviewRequest = GithubReviewRequestDto
+                            .builder()
+                            .body(aiResponse.getGeneralReview()) // 총평
+                            .event("COMMENT") // 기본값 COMMENT
+                            .comments(aiResponse.getComments()) // 인라인 코멘트 리스트
+                            .build();
+
+                    postInlineReviewWithFallback(accessToken, account, pr, reviewRequest, aiResponse);
+                } else {
+                    // 코멘트가 없으면 일반 리뷰 게시 (총평만)
+                    String body = aiResponse.getGeneralReview() != null ? aiResponse.getGeneralReview() : aiReview;
+                    postGeneralComment(accessToken, account, pr, body);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse AI review as JSON, falling back to comment. Error: {}", e.getMessage());
+                postGeneralComment(accessToken, account, pr, aiReview);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to process and post review to GitHub PR #{}: {}", pr.getPrNumber(), e.getMessage());
+        }
+    }
+
+    /**
+     * AI 응답에서 마크다운 코드 블록 제거
+     */
+    private String sanitizeAiReview(String aiReview) {
+        String sanitized = aiReview.trim();
+        if (sanitized.startsWith("```json")) {
+            sanitized = sanitized.substring(7);
+        } else if (sanitized.startsWith("```")) {
+            sanitized = sanitized.substring(3);
+        }
+        if (sanitized.endsWith("```")) {
+            sanitized = sanitized.substring(0, sanitized.length() - 3);
+        }
+        return sanitized.trim();
+    }
+
+    /**
+     * 인라인 리뷰 게시 시도 및 실패 시 Fallback 처리
+     */
+    private void postInlineReviewWithFallback(String accessToken, GithubAccount account, PullRequest pr,
+            GithubReviewRequestDto reviewRequest, AiReviewResponseDto aiResponse) {
+        try {
+            githubService.postPRReview(accessToken, account.getLoginId(), pr.getRepositoryName(), pr.getPrNumber(),
+                    reviewRequest);
+        } catch (Exception e) {
+            log.warn("Failed to post inline review: {}. Falling back to general comment.", e.getMessage());
+            // 인라인 코멘트 실패 시 (예: 라인 번호 불일치) 일반 코멘트로 Fallback
+            StringBuilder fallbackBody = new StringBuilder(aiResponse.getGeneralReview())
+                    .append("\n\n### 상세 코멘트 (전환됨)\n");
+
+            for (var comment : aiResponse.getComments()) {
+                fallbackBody.append(String.format("- **%s (Line %d)**: %s\n",
+                        comment.getPath(), comment.getLine(), comment.getBody()));
+            }
+            postGeneralComment(accessToken, account, pr, fallbackBody.toString());
+        }
+    }
+
+    /**
+     * 일반 코멘트 게시
+     */
+    private void postGeneralComment(String accessToken, GithubAccount account, PullRequest pr, String body) {
+        String formattedReview = formatReviewForGithub(body);
+        githubService.postPRComment(accessToken, account.getLoginId(), pr.getRepositoryName(), pr.getPrNumber(),
+                formattedReview);
     }
 
     /**
