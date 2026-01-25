@@ -1,4 +1,4 @@
-import com.seojs.aisenpai_backend.github.dto.GithubApiCommentDto;
+
 package com.seojs.aisenpai_backend.pullrequest.service;
 
 import com.seojs.aisenpai_backend.exception.OpenAiKeyNotSetEx;
@@ -32,6 +32,8 @@ import java.nio.file.FileSystems;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.util.List;
+
+import com.seojs.aisenpai_backend.github.dto.GithubApiCommentDto;
 
 @Slf4j
 @RequiredArgsConstructor
