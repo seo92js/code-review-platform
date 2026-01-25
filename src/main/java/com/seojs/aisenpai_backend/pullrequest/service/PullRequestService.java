@@ -190,8 +190,22 @@ public class PullRequestService {
                                     .comments(aiResponse.getComments()) // 인라인 코멘트 리스트
                                     .build();
 
-                            githubService.postPRReview(accessToken, account.getLoginId(), pr.getRepositoryName(),
-                                    prNumber, reviewRequest);
+                            try {
+                                githubService.postPRReview(accessToken, account.getLoginId(), pr.getRepositoryName(),
+                                        prNumber, reviewRequest);
+                            } catch (Exception e) {
+                                log.warn("Failed to post inline review: {}. Falling back to general comment.",
+                                        e.getMessage());
+                                // 인라인 코멘트 실패 시 (예: 라인 번호 불일치) 일반 코멘트로 Fallback
+                                String fallbackBody = aiResponse.getGeneralReview() + "\n\n### 상세 코멘트 (전환됨)\n";
+                                for (var comment : aiResponse.getComments()) {
+                                    fallbackBody += String.format("- **%s (Line %d)**: %s\n",
+                                            comment.getPath(), comment.getLine(), comment.getBody());
+                                }
+                                String formattedReview = formatReviewForGithub(fallbackBody);
+                                githubService.postPRComment(accessToken, account.getLoginId(), pr.getRepositoryName(),
+                                        prNumber, formattedReview);
+                            }
                         } else {
                             String body = aiResponse.getGeneralReview() != null ? aiResponse.getGeneralReview()
                                     : aiReview;
