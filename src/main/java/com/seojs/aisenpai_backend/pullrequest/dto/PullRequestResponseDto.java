@@ -18,15 +18,16 @@ public class PullRequestResponseDto {
     private ReviewStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String aiReview;
 
     public static PullRequestResponseDto fromEntity(PullRequest pullRequest) {
         return new PullRequestResponseDto(
-            pullRequest.getPrNumber(),
-            pullRequest.getTitle(),
-            pullRequest.getAction(),
-            pullRequest.getStatus(),
-            pullRequest.getCreatedAt(),
-            pullRequest.getUpdatedAt()
-        );
+                pullRequest.getPrNumber(),
+                pullRequest.getTitle(),
+                pullRequest.getAction(),
+                pullRequest.getStatus(),
+                pullRequest.getCreatedAt(),
+                pullRequest.getUpdatedAt(),
+                pullRequest.getAiReview());
     }
 }
