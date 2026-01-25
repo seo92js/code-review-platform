@@ -8,6 +8,7 @@ import com.seojs.aisenpai_backend.github.dto.WebhookPayloadDto.RepositoryDto;
 import com.seojs.aisenpai_backend.github.dto.WebhookPayloadDto.UserDto;
 import com.seojs.aisenpai_backend.github.entity.GithubAccount;
 import com.seojs.aisenpai_backend.github.service.GithubService;
+import com.seojs.aisenpai_backend.github.service.ReviewAnchorService;
 import com.seojs.aisenpai_backend.github.service.WebhookSecurityService;
 import com.seojs.aisenpai_backend.github.service.TokenEncryptionService;
 import com.seojs.aisenpai_backend.pullrequest.dto.PullRequestResponseDto;
@@ -52,6 +53,9 @@ class PullRequestServiceTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private ReviewAnchorService reviewAnchorService;
+
     private PullRequestService pullRequestService;
 
     @BeforeEach
@@ -59,7 +63,7 @@ class PullRequestServiceTest {
         MockitoAnnotations.openMocks(this);
         pullRequestService = new PullRequestService(pullRequestRepository, githubService,
                 webhookSecurityService, objectMapper, eventPublisher, tokenEncryptionService,
-                notificationService);
+                notificationService, reviewAnchorService);
     }
 
     @Test

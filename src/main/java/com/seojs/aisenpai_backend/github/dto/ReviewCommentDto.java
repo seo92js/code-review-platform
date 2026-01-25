@@ -14,6 +14,9 @@ public class ReviewCommentDto {
     @JsonAlias("file")
     private String path;
 
+    @JsonAlias("codeSnippet")
+    private String codeSnippet;
+
     private Integer line;
 
     @JsonAlias("comment")
