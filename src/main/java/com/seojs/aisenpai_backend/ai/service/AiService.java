@@ -6,7 +6,9 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -19,8 +21,17 @@ public class AiService {
 
         log.info("AI review started with model: {}", actualModel);
 
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setReadTimeout(120 * 1000);
+        requestFactory.setConnectTimeout(60 * 1000);
+
+        RestClient.Builder restClientBuilder = RestClient
+                .builder()
+                .requestFactory(requestFactory);
+
         OpenAiApi userApi = OpenAiApi.builder()
                 .apiKey(apiKey)
+                .restClientBuilder(restClientBuilder)
                 .build();
 
         OpenAiChatOptions options = OpenAiChatOptions.builder()
