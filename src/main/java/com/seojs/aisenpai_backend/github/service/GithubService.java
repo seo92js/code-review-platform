@@ -326,6 +326,28 @@ public class GithubService {
     }
 
     /**
+     * Github PR에 인라인 리뷰 게시 (Review API 사용)
+     */
+    public void postPRReview(String accessToken, String owner, String repo, int prNumber,
+            GithubReviewRequestDto reviewRequest) {
+        String url = String.format("https://api.github.com/repos/%s/%s/pulls/%d/reviews", owner, repo, prNumber);
+
+        HttpHeaders headers = createAuthHeaders(accessToken);
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+        headers.set("Accept", "application/vnd.github.v3+json");
+
+        HttpEntity<GithubReviewRequestDto> entity = new HttpEntity<>(reviewRequest, headers);
+
+        try {
+            restTemplate.postForEntity(url, entity, String.class);
+            log.info("Posted inline review to PR #{} in {}/{}", prNumber, owner, repo);
+        } catch (Exception e) {
+            log.error("Failed to post inline review to PR #{} in {}/{}: {}", prNumber, owner, repo, e.getMessage());
+            throw new GitHubApiEx("Failed to post PR review", e);
+        }
+    }
+
+    /**
      * GitHub API 인증 헤더 생성
      */
     private HttpHeaders createAuthHeaders(String accessToken) {

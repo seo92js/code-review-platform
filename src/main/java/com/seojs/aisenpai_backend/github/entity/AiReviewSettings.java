@@ -123,6 +123,20 @@ public class AiReviewSettings {
             }
         }
 
+        sb.append("### 응답 형식 (매우 중요)\n");
+        sb.append("반드시 아래 JSON 형식으로만 응답해 주세요. 마크다운 코드 블록(```json 등)도 포함하지 말고 오직 JSON 문자열만 반환하세요.\n");
+        sb.append("파일명(file)은 제공된 diff 상의 경로와 정확히 일치해야 합니다.\n");
+        sb.append("{\n");
+        sb.append("  \"generalReview\": \"전반적인 리뷰 요약 (한국어)\",\n");
+        sb.append("  \"comments\": [\n");
+        sb.append("    {\n");
+        sb.append("      \"file\": \"src/main/java/Example.java\",\n");
+        sb.append("      \"line\": 10,\n");
+        sb.append("      \"comment\": \"코멘트 내용 (한국어)\"\n");
+        sb.append("    }\n");
+        sb.append("  ]\n");
+        sb.append("}\n");
+
         return sb.toString();
     }
 }
