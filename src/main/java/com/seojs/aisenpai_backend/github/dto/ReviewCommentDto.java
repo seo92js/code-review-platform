@@ -19,6 +19,8 @@ public class ReviewCommentDto {
 
     private Integer line;
 
+    private String side;
+
     @JsonAlias("comment")
     private String body;
 }

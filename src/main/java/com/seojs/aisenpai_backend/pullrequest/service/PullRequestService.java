@@ -211,6 +211,7 @@ public class PullRequestService {
                             validComments.add(ReviewCommentDto.builder()
                                     .path(comment.getPath())
                                     .line(calculatedLine)
+                                    .side("RIGHT")
                                     .body(comment.getBody())
                                     .build());
                         } else {
