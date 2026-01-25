@@ -212,7 +212,7 @@ public class PullRequestService {
                                     .path(comment.getPath())
                                     .line(calculatedLine)
                                     .side("RIGHT")
-                                    .body(comment.getBody())
+                                    .body(formatReviewForGithub(comment.getBody()))
                                     .build());
                         } else {
                             // 라인을 못 찾음 -> Fallback (일반 코멘트에 추가)
@@ -225,7 +225,7 @@ public class PullRequestService {
                     if (!validComments.isEmpty()) {
                         GithubReviewRequestDto reviewRequest = GithubReviewRequestDto
                                 .builder()
-                                .body(aiResponse.getGeneralReview()) // 총평
+                                .body(formatReviewForGithub(aiResponse.getGeneralReview())) // 총평
                                 .event("COMMENT")
                                 .comments(validComments)
                                 .build();
