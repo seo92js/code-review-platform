@@ -22,25 +22,33 @@ public class ReviewAnchorService {
         }
 
         // Patch 파싱 및 검색
-        String[] patchLines = patch.split("\n");
+        String[] patchLines = patch.split("\\R");
         int currentLineInFile = 0;
 
         for (String line : patchLines) {
-            if (line.startsWith("@@")) {
+            String trimmedLine = line.trim();
+
+            if (trimmedLine.startsWith("@@")) {
                 try {
-                    String[] parts = line.split(" ");
-                    String newInfo = parts[2];
-                    String startLineStr = newInfo.substring(1).split(",")[0];
-                    currentLineInFile = Integer.parseInt(startLineStr) - 1;
+                    String[] parts = trimmedLine.split("\\s+");
+                    if (parts.length >= 3) {
+                        String newInfo = parts[2];
+                        String cleanNewInfo = newInfo.startsWith("+") ? newInfo.substring(1) : newInfo;
+                        String startLineStr = cleanNewInfo.split(",")[0];
+
+                        currentLineInFile = Integer.parseInt(startLineStr) - 1; // 0-based context
+                    }
                 } catch (Exception e) {
-                    log.warn("Failed to parse hunk header: {}", line);
-                    currentLineInFile = 0;
+                    log.warn("Failed to parse hunk header: '{}'. Error: {}", line, e.getMessage());
+                    currentLineInFile = -1;
                 }
                 continue;
             }
 
-            // 라인 타입 확인
-            // ' ' (Context), '+' (Added), '-' (Removed)
+            if (currentLineInFile == -1) {
+                continue;
+            }
+
             if (line.startsWith(" ")) {
                 currentLineInFile++;
             } else if (line.startsWith("+")) {
@@ -52,8 +60,6 @@ public class ReviewAnchorService {
                 if (cleanLine.contains(targetLine)) {
                     return currentLineInFile;
                 }
-            } else if (line.startsWith("-")) {
-                // 삭제된 라인은 현재 파일 라인 카운트에 영향 안 줌 (새 파일 기준)
             }
         }
 
