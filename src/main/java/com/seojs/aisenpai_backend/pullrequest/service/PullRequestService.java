@@ -1,3 +1,4 @@
+import com.seojs.aisenpai_backend.github.dto.GithubApiCommentDto;
 package com.seojs.aisenpai_backend.pullrequest.service;
 
 import com.seojs.aisenpai_backend.exception.OpenAiKeyNotSetEx;
@@ -190,70 +191,15 @@ public class PullRequestService {
             try {
                 AiReviewResponseDto aiResponse = objectMapper.readValue(sanitizedAiReview, AiReviewResponseDto.class);
 
-                // 코멘트가 있을 경우
                 if (aiResponse.getComments() != null && !aiResponse.getComments().isEmpty()) {
-                    List<ReviewCommentDto> validComments = new java.util.ArrayList<>();
-                    StringBuilder fallbackComments = new StringBuilder();
+                    List<ReviewCommentDto> enrichedComments = calculateLineNumbers(aiResponse.getComments(),
+                            changedFiles);
 
-                    for (var comment : aiResponse.getComments()) {
-                        // 해당 파일의 Patch 찾기
-                        String filePatch = changedFiles.stream()
-                                .filter(f -> f.getFilename().equals(comment.getPath()))
-                                .findFirst()
-                                .map(ChangedFileDto::getPatch)
-                                .orElse(null);
+                    // DB 업데이트 (라인 번호 포함된 데이터 저장)
+                    saveEnrichedReviewToDb(pr, aiResponse, enrichedComments);
 
-                        Integer calculatedLine = reviewAnchorService.findLineNumber(filePatch,
-                                comment.getCodeSnippet());
-
-                        if (calculatedLine != null) {
-                            // 유효한 라인을 찾음 -> 인라인 코멘트
-                            validComments.add(ReviewCommentDto.builder()
-                                    .path(comment.getPath())
-                                    .line(calculatedLine)
-                                    .side("RIGHT")
-                                    .body(formatReviewForGithub(comment.getBody()))
-                                    .build());
-                        } else {
-                            // 라인을 못 찾음 -> Fallback (일반 코멘트에 추가)
-                            fallbackComments.append(String.format("- **%s**: %s\n> `%s`\n\n",
-                                    comment.getPath(), comment.getBody(), comment.getCodeSnippet()));
-                        }
-                    }
-
-                    // 라인 코멘트 게시
-                    if (!validComments.isEmpty()) {
-                        GithubReviewRequestDto reviewRequest = GithubReviewRequestDto
-                                .builder()
-                                .body(formatReviewForGithub(aiResponse.getGeneralReview())) // 총평
-                                .event("COMMENT")
-                                .comments(validComments)
-                                .build();
-
-                        try {
-                            githubService.postPRReview(accessToken, account.getLoginId(), pr.getRepositoryName(),
-                                    pr.getPrNumber(), reviewRequest);
-                        } catch (Exception e) {
-                            log.warn("Failed to post inline review: {}", e.getMessage());
-
-                            for (var vc : validComments) {
-                                fallbackComments.append(String.format("- **%s (Line %d)**: %s\n", vc.getPath(),
-                                        vc.getLine(), vc.getBody()));
-                            }
-                        }
-                    }
-
-                    // Fallback 코멘트 게시 (못 찾은 것들)
-                    if (fallbackComments.length() > 0) {
-                        String fallbackBody = (validComments.isEmpty() ? aiResponse.getGeneralReview() + "\n\n" : "") +
-                                "### 추가 코멘트 (라인 매칭 실패)\n" + fallbackComments.toString();
-                        postGeneralComment(accessToken, account, pr, fallbackBody);
-                    }
-
-                    // 둘 다 비어있는 경우 총평만이라도 남겨야 함.
-                    if (validComments.isEmpty() && fallbackComments.length() == 0) {
-                        postGeneralComment(accessToken, account, pr, aiResponse.getGeneralReview());
-                    }
+                    // GitHub 게시 (API용 DTO 변환 후 전송)
+                    postCommentsToGitHub(accessToken, account, pr, aiResponse, enrichedComments);
 
                 } else {
                     // 코멘트가 없으면 일반 리뷰 게시 (총평만)
@@ -266,6 +212,86 @@ public class PullRequestService {
             }
         } catch (Exception e) {
             log.warn("Failed to process and post review to GitHub PR #{}: {}", pr.getPrNumber(), e.getMessage());
+        }
+    }
+
+    private List<ReviewCommentDto> calculateLineNumbers(List<ReviewCommentDto> comments,
+            List<ChangedFileDto> changedFiles) {
+        List<ReviewCommentDto> enrichedComments = new java.util.ArrayList<>();
+        for (var comment : comments) {
+            String filePatch = changedFiles.stream()
+                    .filter(f -> f.getFilename().equals(comment.getPath()))
+                    .findFirst()
+                    .map(ChangedFileDto::getPatch)
+                    .orElse(null);
+            Integer line = reviewAnchorService.findLineNumber(filePatch, comment.getCodeSnippet());
+
+            enrichedComments.add(ReviewCommentDto.builder()
+                    .path(comment.getPath())
+                    .codeSnippet(comment.getCodeSnippet())
+                    .line(line)
+                    .side(line != null ? "RIGHT" : null)
+                    .body(comment.getBody())
+                    .build());
+        }
+        return enrichedComments;
+    }
+
+    private void saveEnrichedReviewToDb(PullRequest pr, AiReviewResponseDto originalResponse,
+            List<ReviewCommentDto> enrichedComments) throws Exception {
+        AiReviewResponseDto updatedResponse = AiReviewResponseDto.builder()
+                .generalReview(originalResponse.getGeneralReview())
+                .comments(enrichedComments)
+                .build();
+
+        String updatedJson = objectMapper.writeValueAsString(updatedResponse);
+        pr.updateAiReview(updatedJson);
+    }
+
+    private void postCommentsToGitHub(String accessToken, GithubAccount account, PullRequest pr,
+            AiReviewResponseDto aiResponse, List<ReviewCommentDto> enrichedComments) {
+        List<GithubApiCommentDto> commentsToPost = enrichedComments.stream()
+                .filter(c -> c.getLine() != null)
+                .map(c -> GithubApiCommentDto.builder()
+                        .path(c.getPath())
+                        .line(c.getLine())
+                        .side("RIGHT")
+                        .body(formatReviewForGithub(c.getBody()))
+                        .build())
+                .toList();
+
+        StringBuilder manualFallback = new StringBuilder();
+
+        // 1. 인라인 코멘트 게시
+        if (!commentsToPost.isEmpty()) {
+            GithubReviewRequestDto reviewRequest = GithubReviewRequestDto.builder()
+                    .body(formatReviewForGithub(aiResponse.getGeneralReview()))
+                    .event("COMMENT")
+                    .comments(commentsToPost)
+                    .build();
+
+            try {
+                githubService.postPRReview(accessToken, account.getLoginId(), pr.getRepositoryName(),
+                        pr.getPrNumber(), reviewRequest);
+            } catch (Exception e) {
+                log.warn("Failed to post inline review: {}", e.getMessage());
+                manualFallback.append("\n(Also failed to post inline comments due to error)\n");
+            }
+        }
+
+        // Fallback 코멘트 준비 (라인 매칭 실패한 것들)
+        enrichedComments.stream().filter(c -> c.getLine() == null).forEach(c -> {
+            manualFallback.append(String.format("- **%s**: %s\n> `%s`\n\n",
+                    c.getPath(), c.getBody(), c.getCodeSnippet()));
+        });
+
+        // Fallback 게시 (혹은 인라인 실패 시에도 게시)
+        if (manualFallback.length() > 0) {
+            String fallbackBody = (commentsToPost.isEmpty() ? aiResponse.getGeneralReview() + "\n\n" : "") +
+                    "### 추가 코멘트 (라인 매칭 실패)\n" + manualFallback.toString();
+            postGeneralComment(accessToken, account, pr, fallbackBody);
+        } else if (commentsToPost.isEmpty()) {
+            postGeneralComment(accessToken, account, pr, aiResponse.getGeneralReview());
         }
     }
 

@@ -1,7 +1,6 @@
 package com.seojs.aisenpai_backend.github.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -11,12 +10,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ReviewCommentDto {
+public class GithubApiCommentDto {
     @JsonAlias("file")
     private String path;
-
-    @JsonAlias("codeSnippet")
-    private String codeSnippet;
 
     private Integer line;
 

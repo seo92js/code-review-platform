@@ -14,5 +14,5 @@ import java.util.List;
 public class GithubReviewRequestDto {
     private String body;
     private String event;
-    private List<ReviewCommentDto> comments;
+    private List<GithubApiCommentDto> comments;
 }
